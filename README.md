@@ -13,7 +13,7 @@ A TensorFlow implementation of Neural Sequence Labeling model, which is able to 
 
 This model follows the structure of `LSTM + CRF + Chars Embeddings`, and several variant modules are available, like single bi-direct dynamic rnn, stacked bi-direct dynamic rnn and complex stacked bi-direct rnn (enhance the usage of char embeddings). RNN cell can use LSTM or GRU, and etc.
 
-The performance (**F1 Score**) of this neural sequence labeling model is ***90.00~91.00***, which is near to the state-of-the-art performance (highest reported: `F1 Score = 91.21`, [ref.](https://www.quora.com/What-is-the-current-state-of-the-art-in-Named-Entity-Recognition-NER)).
+The performance (**F1 Score**) of this neural sequence labeling model on NER task is ***90.00~91.00***, which is near to the state-of-the-art performance (highest reported: `F1 Score = 91.21`, [ref.](https://www.quora.com/What-is-the-current-state-of-the-art-in-Named-Entity-Recognition-NER)).
 
 ### Task
 Given a sentence, give a tag to each word. For example, a classical application is Part-of-Speech (POS) Tagging
