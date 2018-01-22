@@ -11,11 +11,12 @@ A TensorFlow implementation of Neural Sequence Labeling model, which is able to 
 - [Part-of-Speech Tagging from 97% to 100%: Is It Time for Some Linguistics?](https://nlp.stanford.edu/pubs/CICLing2011-manning-tagging.pdf)
 - [Part-of-Speech Tagging with Bidirectional Long Short-Term Memory Recurrent Neural Network](https://arxiv.org/pdf/1510.06168.pdf)
 
-This model follows the structure of `LSTM + CRF + Chars Embeddings`, and several variant modules are available, like single bi-direct dynamic rnn, stacked bi-direct dynamic rnn and complex stacked bi-direct rnn (enhance the usage of char embeddings). RNN cell can use LSTM or GRU, and etc.
+This model follows the structure of `LSTM + CRF + Chars Embeddings (RNN/CNN)`, and several variant modules are available, like single bi-direct dynamic rnn, stacked bi-direct dynamic rnn and complex stacked bi-direct rnn (enhance the usage of char embeddings). RNN cell can use LSTM or GRU, and etc.
 
-The performance (**F1 Score**) of this neural sequence labeling model on NER task is ***90.00~91.00***, which is near to the state-of-the-art performance (highest reported: `F1 Score = 91.21`, [ref.](https://www.quora.com/What-is-the-current-state-of-the-art-in-Named-Entity-Recognition-NER)).
+The performance (**F1 Score**) of this neural sequence labeling model on *NER* task is ***90.00~91.00***, which is near to the state-of-the-art performance (highest reported: `F1 Score = 91.21`, [ref. link](https://www.quora.com/What-is-the-current-state-of-the-art-in-Named-Entity-Recognition-NER)).
 
 ### Task
+
 Given a sentence, give a tag to each word. For example, a classical application is Part-of-Speech (POS) Tagging
 ```bash
 EU  rejects German call to boycott British lamb . 
@@ -35,6 +36,7 @@ B-ORG    I-ORG      O       O  B-LOC
 ```
 
 ### Usage
+
 **Note**: CoNLL 2003 English Dataset is obtained from [anago/data/conll2003/en/](https://github.com/Hironsan/anago/tree/master/data/conll2003/en), which is already placed in `data/conll2003/en` folder.
 
 To download pre-trained word embeddings and pre-process data, run

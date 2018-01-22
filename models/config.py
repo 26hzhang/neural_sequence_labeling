@@ -1,5 +1,5 @@
 import os
-from models.preprocess import load_vocab, load_glove_embeddings
+from models.data_process import load_vocab, load_glove_embeddings
 from models.logger import get_logger
 
 

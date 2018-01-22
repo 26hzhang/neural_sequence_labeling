@@ -1,5 +1,5 @@
 from models.model import SeqLabelModel
-from models.preprocess import Dataset, Processor
+from models.data_process import Dataset, Processor
 from models.config import Config
 import os
 import sys

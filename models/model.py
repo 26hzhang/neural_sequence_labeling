@@ -1,8 +1,6 @@
 import tensorflow as tf
 from models.base_model import BaseModel
-from models.logger import Progbar
-from models.preprocess import batch_iter, pad_sequences
-from models.func import viterbi_decode, BiRNN, StackedBiRNN, dense, compute_accuracy_f1
+from models import pad_sequences, viterbi_decode, BiRNN, StackedBiRNN, dense, compute_accuracy_f1, batch_iter, Progbar
 import sys
 
 
@@ -152,12 +150,12 @@ class SeqLabelModel(BaseModel):
                 no_imprv_epoch_count = 0
                 self.save_session(epoch)  # save model with a new best score is obtained
                 best_score = cur_score
-                self.logger.info(' -- new best score: {}'.format(best_score))
+                self.logger.info(' -- new BEST score: {:04.2f}'.format(best_score))
             else:
                 no_imprv_epoch_count += 1
-                if no_imprv_epoch_count > self.config.no_imprv_threshold:
-                    self.logger.info('early stop at %dth epoch without improvement for %d epochs, best score: %f' %
-                                     (epoch, no_imprv_epoch_count, best_score))
+                if no_imprv_epoch_count >= self.config.no_imprv_threshold:
+                    self.logger.info('early stop at {}th epoch without improvement for {} epochs, BEST score: {:04.2f}'
+                                     .format(epoch, no_imprv_epoch_count, best_score))
                     # save the last one
                     self.save_session(epoch)
                     break

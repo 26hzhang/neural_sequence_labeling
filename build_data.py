@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from models.preprocess import UNK, NUM, PAD
+from models.data_process import UNK, NUM, PAD
 import unicodedata
 import re
 

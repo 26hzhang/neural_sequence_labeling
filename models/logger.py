@@ -25,7 +25,7 @@ class Progbar(object):
     """Progbar class copied from keras (https://github.com/fchollet/keras/)
     Displays a progress bar.
     Small edit : added strict arg to update
-    # Arguments
+    Arguments
         target: Total number of steps expected.
         interval: Minimum visual progress update interval (in seconds).
     """
@@ -41,7 +41,7 @@ class Progbar(object):
 
     def update(self, current, values=None, exact=None, strict=None):
         """Updates the progress bar.
-        # Arguments
+        Arguments
             current: Index of current step.
             values: List of tuples (name, value_for_last_step).
                 The progress bar will display averages for these values.
@@ -110,7 +110,7 @@ class Progbar(object):
                     info += ' - %s: %s' % (k, self.sum_values[k])
             self.total_width += len(info)
             if prev_total_width > self.total_width:
-                info += ((prev_total_width-self.total_width) * " ")
+                info += ((prev_total_width-self.total_width) * ' ')
             sys.stdout.write(info)
             sys.stdout.flush()
             if current >= self.target:
