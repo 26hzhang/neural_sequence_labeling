@@ -1,6 +1,6 @@
 # Neural Sequence Labeling
 
-![Authour](https://img.shields.io/badge/Author-Zhang%20Hao%20(Isaac%20Changhau)-blue.svg) ![](https://img.shields.io/badge/Python-3.6-brightgreen.svg) ![](https://img.shields.io/badge/TensorFlow-1.4.0-yellowgreen.svg)
+![Authour](https://img.shields.io/badge/Author-Zhang%20Hao%20(Isaac%20Changhau)-blue.svg) ![](https://img.shields.io/badge/MacOS%20High%20Sierra-10.13.2-green.svg) ![](https://img.shields.io/badge/Python-3.6-brightgreen.svg) ![](https://img.shields.io/badge/TensorFlow-1.4.0-yellowgreen.svg)
 
 A TensorFlow implementation of Neural Sequence Labeling model, which is able to tackle Part-of-Speech (POS) Tagging, Chunking and Named Entity Recognition (NER) tasks. This repository is inspired after reading the following papers about sequence labeling:
 - [Named Entity Recognition with Bidirectional LSTM-CNNs](https://arxiv.org/pdf/1511.08308.pdf)
