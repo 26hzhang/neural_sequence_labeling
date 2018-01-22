@@ -86,7 +86,7 @@ China is one of the biggest country in the World
 B-LOC O  O   O  O   O       O       O  O   B-MISC
 ```
 
-### Resource
+### Resources
 
 #### Embeddings
 - [GloVe Embeddings (6B, 42B, 840B)](https://nlp.stanford.edu/projects/glove/)
@@ -101,3 +101,6 @@ B-LOC O  O   O  O   O       O       O  O   B-MISC
 - [Hironsan/anago](https://github.com/Hironsan/anago)
 - [guillaumegenthial/sequence_tagging](https://github.com/guillaumegenthial/sequence_tagging), [blog](https://guillaumegenthial.github.io/sequence-tagging-with-tensorflow.html)
 - [glample/tagger](https://github.com/glample/tagger), implementation of [Neural Architectures for Named Entity Recognition](https://arxiv.org/pdf/1603.01360.pdf)
+
+#### Others
+- [models/tutorials/rnn/quickdraw/train_model.py](https://github.com/tensorflow/models/blob/master/tutorials/rnn/quickdraw/train_model.py)
