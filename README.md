@@ -104,3 +104,5 @@ B-LOC O  O   O  O   O       O       O  O   B-MISC
 
 #### Others
 - [models/tutorials/rnn/quickdraw/train_model.py](https://github.com/tensorflow/models/blob/master/tutorials/rnn/quickdraw/train_model.py)
+- [使用深度学习进行中文自然语言处理之序列标注](https://www.jianshu.com/p/7e233ef57cb6)
+- [Building a large annotated corpus of English: the Penn Treebank](https://catalog.ldc.upenn.edu/docs/LDC95T7/cl93.html)
