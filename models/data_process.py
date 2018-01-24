@@ -2,8 +2,8 @@ import numpy as np
 import unicodedata
 import re
 
-UNK = '<UNK>'
-NUM = '<NUM>'
+UNK = '<UNK>'  # represent unknown tokens in dataset
+NUM = '<NUM>'  # represent numbers in dataset
 PAD = '<PAD>'  # default at the first place of embedding (padding zero)
 
 

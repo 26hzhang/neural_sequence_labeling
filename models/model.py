@@ -1,6 +1,7 @@
 import tensorflow as tf
 from models.base_model import BaseModel
-from models import pad_sequences, viterbi_decode, BiRNN, StackedBiRNN, dense, compute_accuracy_f1, batch_iter, Progbar
+from models import pad_sequences, viterbi_decode, compute_accuracy_f1, batch_iter, Progbar
+from models import highway_network, multi_conv1d, BiRNN, StackedBiRNN, dense, dropout
 import sys
 
 
@@ -13,7 +14,7 @@ class SeqLabelModel(BaseModel):
         self._build_model_op()
         self._build_pred_op()
         self._build_loss_op()
-        self._build_train_op(self.config.learning_method, self.config.learning_rate, self.loss, self.config.grad_clip)
+        self._build_train_op(self.config.lr_method, self.lr, self.loss, self.config.grad_clip)
         self.initialize_session()
         sys.stdout.write(' done.\n')
 
@@ -31,10 +32,11 @@ class SeqLabelModel(BaseModel):
         # shape = (batch size, max length of sentence in batch)
         self.labels = tf.placeholder(tf.int32, shape=[None, self.config.max_len_sent], name="labels")
         # hyper parameters
-        self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, name="dropout_keep_prob")
-        self.learning_rate = tf.placeholder(dtype=tf.float32, name="learning_rate")
+        self.keep_prob = tf.placeholder(dtype=tf.float32, name="keep_prob")
+        self.lr = tf.placeholder(dtype=tf.float32, name="lr")
+        self.is_train = tf.placeholder(name='is_train', shape=[], dtype=tf.bool)
 
-    def _get_feed_dict(self, words, labels=None, learning_rate=None, dropout_keep_prob=None):
+    def _get_feed_dict(self, words, is_train, labels=None, lr=None, keep_prob=None):
         # perform padding of the given data
         if self.config.use_char_emb:
             char_ids, word_ids = zip(*words)
@@ -45,66 +47,69 @@ class SeqLabelModel(BaseModel):
             word_ids, sequence_lengths = pad_sequences(words, max_length=self.config.max_len_sent, pad_tok=0)
             char_ids = word_lengths = None
         # build feed dictionary
-        feed_dict = {self.word_ids: word_ids, self.seq_lengths: sequence_lengths}
+        feed_dict = {self.word_ids: word_ids, self.seq_lengths: sequence_lengths, self.is_train: is_train}
         if self.config.use_char_emb:
             feed_dict[self.char_ids] = char_ids
             feed_dict[self.word_lengths] = word_lengths
         if labels is not None:
             labels, _ = pad_sequences(labels, max_length=self.config.max_len_sent, pad_tok=0)
             feed_dict[self.labels] = labels
-        if learning_rate is not None:
-            feed_dict[self.learning_rate] = learning_rate
-        if dropout_keep_prob is not None:
-            feed_dict[self.dropout_keep_prob] = dropout_keep_prob
+        if lr is not None:
+            feed_dict[self.lr] = lr
+        if keep_prob is not None:
+            feed_dict[self.keep_prob] = keep_prob
         return feed_dict, sequence_lengths
 
     def _build_word_embeddings_op(self):
         with tf.variable_scope('words'):
             if self.config.use_pretrained:
                 _word_embeddings = tf.Variable(self.config.glove_embeddings, name='_word_embeddings', dtype=tf.float32,
-                                               trainable=self.config.train_embedding)
+                                               trainable=self.config.finetune_emb)
             else:
                 _word_embeddings = tf.get_variable(name='_word_embeddings', dtype=tf.float32, trainable=True,
                                                    shape=[self.config.word_vocab_size, self.config.word_dim])
             word_embeddings = tf.nn.embedding_lookup(_word_embeddings, self.word_ids, name="word_embeddings")
 
-        with tf.variable_scope('chars'):
+        with tf.variable_scope('char_rep_method'):
             if self.config.use_char_emb:
                 _char_embeddings = tf.get_variable(name='_char_embeddings', dtype=tf.float32, trainable=True,
                                                    shape=[self.config.char_vocab_size, self.config.char_dim])
                 char_embeddings = tf.nn.embedding_lookup(_char_embeddings, self.char_ids, name="char_embeddings")
                 s = tf.shape(char_embeddings)  # [batch size, max length of sentence, max length of word, char_dim]
-                # put the time dimension on axis=1
-                char_embeddings = tf.reshape(char_embeddings, shape=[s[0] * s[1], s[-2], self.config.char_dim])
-                word_lengths = tf.reshape(self.word_lengths, shape=[s[0] * s[1]])
-                # bi-directional rnn to encode char embeddings
-                char_bi_rnn = BiRNN(self.config.hidden_size_char, cell_type=self.config.cell_type, scope='char_bi_rnn')
-                output = char_bi_rnn(char_embeddings, word_lengths, return_last_state=True)
-                # shape = (batch size, max sentence length, char hidden size)
-                self.char_output = tf.reshape(output, shape=[s[0], s[1], 2 * self.config.hidden_size_char])
+                if self.config.char_rep_method == 'rnn':
+                    char_embeddings = tf.reshape(char_embeddings, shape=[s[0] * s[1], s[-2], self.config.char_dim])
+                    word_lengths = tf.reshape(self.word_lengths, shape=[s[0] * s[1]])
+                    char_bi_rnn = BiRNN(self.config.num_units_char, scope='char_rnn')
+                    output = char_bi_rnn(char_embeddings, word_lengths, return_last_state=True)
+                else:  # cnn model for char representation
+                    output = multi_conv1d(char_embeddings, self.config.filter_sizes, self.config.heights, "VALID",
+                                          self.is_train, self.keep_prob, scope="char_cnn")
+                # shape = (batch size, max sentence length, char representation size)
+                self.char_output = tf.reshape(output, [s[0], s[1], self.config.char_out_size])
                 word_embeddings = tf.concat([word_embeddings, self.char_output], axis=-1)
-        self.word_embeddings = tf.nn.dropout(word_embeddings, self.dropout_keep_prob)  # dropout before bi-lstm
+        if self.config.use_highway:
+            with tf.variable_scope("highway"):
+                self.word_embeddings = highway_network(word_embeddings, self.config.highway_num_layers, bias=True,
+                                                       is_train=self.is_train, keep_prob=self.keep_prob)
+        else:  # directly dropout before model_op
+            self.word_embeddings = dropout(word_embeddings, keep_prob=self.keep_prob, is_train=self.is_train)
 
     def _build_model_op(self):
         with tf.variable_scope('bidirectional_rnn'):
-            if self.config.stacked == 'simple_stack':
-                # 2-layer stacked bidirectional lstm networks
-                stacked_bi_rnn = StackedBiRNN(2, self.config.hidden_size_rnn, cell_type=self.config.cell_type,
-                                              scope='simple_stack')
-                output = stacked_bi_rnn(self.word_embeddings, self.seq_lengths, keep_prob=self.dropout_keep_prob)
-            elif self.config.stacked == 'complex_stack':
-                # first layer of bi-directional rnn
-                merge_bi_rnn = BiRNN(self.config.hidden_size_rnn, cell_type=self.config.cell_type, scope='merge_bi_rnn')
-                merge_output = merge_bi_rnn(self.word_embeddings, self.seq_lengths)
+            if self.config.mode_type == 'stack':  # n-layers stacked bidirectional rnn
+                rnns = StackedBiRNN(self.config.num_layers, self.config.num_units, scope='stack_mode')
+                output = rnns(self.word_embeddings, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
+            elif self.config.mode_type == 'complex':
+                fst_rnns = BiRNN(self.config.num_units, scope='first_bi_rnn')
+                merge_output = fst_rnns(self.word_embeddings, self.seq_lengths)
                 # match char output shape to merge_output shape
-                char_output = dense(self.char_output, 2 * self.config.hidden_size_rnn, scope='char_project')
+                char_output = dense(self.char_output, 2 * self.config.num_units, scope='project')
                 merge_output = tf.add(merge_output, char_output)
-                # second layer of bi-directional rnn
-                bi_rnn = BiRNN(self.config.hidden_size_rnn, cell_type=self.config.cell_type, scope='complex_stack')
-                output = bi_rnn(merge_output, self.seq_lengths, keep_prob=self.dropout_keep_prob)
+                rnns = BiRNN(self.config.num_units, scope='complex_mode')  # second layer of bi-directional rnn
+                output = rnns(merge_output, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
             else:  # default single model
-                bi_rnn = BiRNN(self.config.hidden_size_rnn, cell_type=self.config.cell_type, scope='single_mode')
-                output = bi_rnn(self.word_embeddings, self.seq_lengths, keep_prob=self.dropout_keep_prob)
+                rnns = BiRNN(self.config.num_units, scope='single_mode')
+                output = rnns(self.word_embeddings, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
 
         self.logits = dense(output, self.config.tag_vocab_size, use_bias=True, scope='project')
 
@@ -126,15 +131,12 @@ class SeqLabelModel(BaseModel):
         self.logger.info('Start training...')
         best_score = 0  # store the current best f1 score on dev_set, updated if new best one is derived
         no_imprv_epoch_count = 0  # count the continuous no improvement epochs
-        num_batches = (len(train_set) + self.config.batch_size - 1) // self.config.batch_size  # number of batches
-        init_learning_rate = self.config.learning_rate  # initial learning rate
-        for epoch in range(1, self.config.epochs + 1):
+        init_lr = self.config.lr  # initial learning rate
+        for epoch in range(1, self.config.epochs + 1):  # run each epoch
             self.logger.info('Epoch %2d/%2d:' % (epoch, self.config.epochs))
-            # run each epoch
-            prog = Progbar(target=num_batches)
+            prog = Progbar(target=(len(train_set) + self.config.batch_size - 1) // self.config.batch_size)  # nbatches
             for i, (words, labels) in enumerate(batch_iter(train_set, self.config.batch_size)):
-                feed_dict, _ = self._get_feed_dict(words, labels, self.config.learning_rate,
-                                                   self.config.dropout_keep_prob)
+                feed_dict, _ = self._get_feed_dict(words, True, labels, self.config.lr, self.config.keep_prob)
                 _, train_loss = self.sess.run([self.train_op, self.loss], feed_dict=feed_dict)
                 prog.update(i + 1, [("train loss", train_loss)])
             self.evaluate(dev_set)  # evaluate dev_set
@@ -142,9 +144,9 @@ class SeqLabelModel(BaseModel):
             cur_score = metrics['f1']
             # learning rate decay method
             if self.config.lr_decay_method == 1:
-                self.config.learning_rate *= self.config.lr_decay
+                self.config.lr *= self.config.lr_decay
             else:
-                self.config.learning_rate = init_learning_rate / (1 + self.config.lr_decay_rate * epoch)
+                self.config.lr = init_lr / (1 + self.config.lr_decay_rate * epoch)
             # performs early stop and parameters save
             if cur_score > best_score:
                 no_imprv_epoch_count = 0
@@ -156,15 +158,13 @@ class SeqLabelModel(BaseModel):
                 if no_imprv_epoch_count >= self.config.no_imprv_threshold:
                     self.logger.info('early stop at {}th epoch without improvement for {} epochs, BEST score: {:04.2f}'
                                      .format(epoch, no_imprv_epoch_count, best_score))
-                    # save the last one
-                    self.save_session(epoch)
+                    self.save_session(epoch)  # save the last one
                     break
         self.logger.info('Training process done...')
 
     def predict(self, words):
-        feed_dict, sequence_lengths = self._get_feed_dict(words, dropout_keep_prob=1.0)
-        if self.config.use_crf:
-            # get tag scores and transition params of CRF
+        feed_dict, sequence_lengths = self._get_feed_dict(words, False, keep_prob=1.0)
+        if self.config.use_crf:  # get tag scores and transition params of CRF
             logits, trans_params = self.sess.run([self.logits, self.trans_params], feed_dict=feed_dict)
             return viterbi_decode(logits, trans_params, sequence_lengths), sequence_lengths
         else:
@@ -176,15 +176,14 @@ class SeqLabelModel(BaseModel):
             self.logger.info("Testing model over DEVELOPMENT dataset")
         else:
             self.logger.info('Testing model over TEST dataset')
-        ground_truth = []
-        predict_labels = []
+        actuals = []
+        predicts = []
         seq_lengths = []
         for words, labels in batch_iter(dataset, self.config.batch_size):
             labels_pred, sequence_lengths = self.predict(words)
-            ground_truth.append(labels)
-            predict_labels.append(labels_pred)
+            actuals.append(labels)
+            predicts.append(labels_pred)
             seq_lengths.append(sequence_lengths)
-        eval_score = compute_accuracy_f1(ground_truth, predict_labels, seq_lengths, self.config.train_task,
-                                         self.config.tag_vocab)
+        eval_score = compute_accuracy_f1(actuals, predicts, seq_lengths, self.config.train_task, self.config.tag_vocab)
         self.logger.info('accuracy: {:04.2f} -- f1 score: {:04.2f}'.format(eval_score['acc'], eval_score['f1']))
         return eval_score

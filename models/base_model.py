@@ -35,20 +35,20 @@ class BaseModel(object):
     def close_session(self):
         self.sess.close()
 
-    def _build_train_op(self, learning_method, learning_rate, loss, grad_clip):
+    def _build_train_op(self, lr_method, lr, loss, grad_clip):
         with tf.variable_scope('train_step'):
-            if learning_method == 'adagrad':
-                optimizer = tf.train.AdagradOptimizer(learning_rate=learning_rate)
-            elif learning_method == 'sgd':
-                optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
-            elif learning_method == 'rmsprop':
-                optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-            elif learning_method == 'adadelta':
-                optimizer = tf.train.AdadeltaOptimizer(learning_rate=learning_rate)
+            if lr_method == 'adagrad':
+                optimizer = tf.train.AdagradOptimizer(learning_rate=lr)
+            elif lr_method == 'sgd':
+                optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr)
+            elif lr_method == 'rmsprop':
+                optimizer = tf.train.RMSPropOptimizer(learning_rate=lr)
+            elif lr_method == 'adadelta':
+                optimizer = tf.train.AdadeltaOptimizer(learning_rate=lr)
             else:  # default adam optimizer
-                if learning_method != 'adam':
-                    print('Unknown given optimizing method {}. Using default adam optimizer.'.format(learning_method))
-                optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+                if lr_method != 'adam':
+                    print('Unknown given optimizing method {}. Using default adam optimizer.'.format(lr_method))
+                optimizer = tf.train.AdamOptimizer(learning_rate=lr)
             if grad_clip is not None:
                 grads, vs = zip(*optimizer.compute_gradients(loss))
                 # clip by global gradient norm
