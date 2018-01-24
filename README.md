@@ -101,6 +101,7 @@ B-LOC O  O   O  O   O       O       O  O   B-MISC
 - [Hironsan/anago](https://github.com/Hironsan/anago)
 - [guillaumegenthial/sequence_tagging](https://github.com/guillaumegenthial/sequence_tagging), [blog](https://guillaumegenthial.github.io/sequence-tagging-with-tensorflow.html)
 - [glample/tagger](https://github.com/glample/tagger), implementation of [Neural Architectures for Named Entity Recognition](https://arxiv.org/pdf/1603.01360.pdf)
+- [marekrei/sequence-labeler](https://github.com/marekrei/sequence-labeler)
 
 #### Others
 - [models/tutorials/rnn/quickdraw/train_model.py](https://github.com/tensorflow/models/blob/master/tutorials/rnn/quickdraw/train_model.py)
