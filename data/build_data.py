@@ -120,8 +120,8 @@ def write_vocab(vocab, filename):
 
 
 def main():
-    data_head_dir = 'data/conll2003/en/raw/'
-    embedding_dir = 'data/glove.6B/glove.6B.{}d.txt'
+    data_head_dir = 'conll2003/en/raw/'
+    embedding_dir = 'glove.6B/glove.6B.{}d.txt'
     # construct word, pos, chunk, ner vocabularies
     train = raw_data_iterator(data_head_dir + 'train.txt', lowercase=True)
     dev = raw_data_iterator(data_head_dir + 'valid.txt', lowercase=True)

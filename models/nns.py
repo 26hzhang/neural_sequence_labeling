@@ -2,52 +2,54 @@ import tensorflow as tf
 from functools import reduce
 from operator import mul
 from tensorflow.python.ops.rnn_cell_impl import _linear
+from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell
+from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn
+from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
 from tensorflow.python.util import nest
 
 
 class BiRNN:
-    """Bi-directional RNN Layer"""
     def __init__(self, num_units, state_is_tuple=True, cell_type='lstm', scope='bi_rnn'):
         self.num_units = num_units
         if cell_type == 'gru':
-            self.cell_fw = tf.nn.rnn_cell.GRUCell(self.num_units)
-            self.cell_bw = tf.nn.rnn_cell.GRUCell(self.num_units)
+            self.cell_fw = GRUCell(self.num_units)
+            self.cell_bw = GRUCell(self.num_units)
         else:  # default
-            self.cell_fw = tf.nn.rnn_cell.LSTMCell(self.num_units, state_is_tuple=state_is_tuple)
-            self.cell_bw = tf.nn.rnn_cell.LSTMCell(self.num_units, state_is_tuple=state_is_tuple)
+            self.cell_fw = LSTMCell(self.num_units, state_is_tuple=state_is_tuple)
+            self.cell_bw = LSTMCell(self.num_units, state_is_tuple=state_is_tuple)
         self.scope = scope
 
     def __call__(self, inputs, seq_len, return_last_state=False, keep_prob=None, is_train=None):
         with tf.variable_scope(self.scope):
             if return_last_state:
-                _, ((_, output_fw), (_, output_bw)) = tf.nn.bidirectional_dynamic_rnn(
-                    self.cell_fw, self.cell_bw, inputs, sequence_length=seq_len, dtype=tf.float32)
+                _, ((_, output_fw), (_, output_bw)) = bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, inputs,
+                                                                                sequence_length=seq_len,
+                                                                                dtype=tf.float32)
                 output = tf.concat([output_fw, output_bw], axis=-1)
             else:
-                (output_fw, output_bw), _ = tf.nn.bidirectional_dynamic_rnn(
-                    self.cell_fw, self.cell_bw, inputs, sequence_length=seq_len, dtype=tf.float32)
+                (output_fw, output_bw), _ = bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, inputs,
+                                                                      sequence_length=seq_len, dtype=tf.float32)
                 output = tf.concat([output_fw, output_bw], axis=-1)
             output = dropout(output, keep_prob, is_train)
         return output
 
 
 class StackedBiRNN:
-    """Stacked Bi-directional RNN Layers"""
     def __init__(self, num_layers, num_units, cell_type='lstm', scope='stacked_bi_rnn'):
         self.num_layers = num_layers
         self.num_units = num_units
         if cell_type == 'gru':
-            self.cells_fw = [tf.nn.rnn_cell.GRUCell(self.num_units) for _ in range(self.num_layers)]
-            self.cells_bw = [tf.nn.rnn_cell.GRUCell(self.num_units) for _ in range(self.num_layers)]
+            self.cells_fw = [GRUCell(self.num_units) for _ in range(self.num_layers)]
+            self.cells_bw = [GRUCell(self.num_units) for _ in range(self.num_layers)]
         else:  # default
-            self.cells_fw = [tf.nn.rnn_cell.LSTMCell(self.num_units) for _ in range(self.num_layers)]
-            self.cells_bw = [tf.nn.rnn_cell.LSTMCell(self.num_units) for _ in range(self.num_layers)]
+            self.cells_fw = [LSTMCell(self.num_units) for _ in range(self.num_layers)]
+            self.cells_bw = [LSTMCell(self.num_units) for _ in range(self.num_layers)]
         self.scope = scope
 
     def __call__(self, inputs, seq_len, keep_prob=None, is_train=None):
         with tf.variable_scope(self.scope):
-            output, *_ = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
-                self.cells_fw, self.cells_bw, inputs, sequence_length=seq_len, dtype=tf.float32)
+            output, *_ = stack_bidirectional_dynamic_rnn(self.cells_fw, self.cells_bw, inputs, sequence_length=seq_len,
+                                                         dtype=tf.float32)
             output = dropout(output, keep_prob, is_train)
         return output
 

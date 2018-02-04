@@ -10,7 +10,7 @@ class SeqLabelModel(BaseModel):
         sys.stdout.write('Build model...')
         super(SeqLabelModel, self).__init__(config)
         self._add_placeholders()
-        self._build_word_embeddings_op()
+        self._build_embeddings_op()
         self._build_model_op()
         self._build_pred_op()
         self._build_loss_op()
@@ -60,7 +60,7 @@ class SeqLabelModel(BaseModel):
             feed_dict[self.keep_prob] = keep_prob
         return feed_dict, sequence_lengths
 
-    def _build_word_embeddings_op(self):
+    def _build_embeddings_op(self):
         with tf.variable_scope('words'):
             if self.config.use_pretrained:
                 _word_embeddings = tf.Variable(self.config.glove_embeddings, name='_word_embeddings', dtype=tf.float32,
@@ -99,7 +99,9 @@ class SeqLabelModel(BaseModel):
             if self.config.mode_type == 'stack':  # n-layers stacked bidirectional rnn
                 rnns = StackedBiRNN(self.config.num_layers, self.config.num_units, scope='stack_mode')
                 output = rnns(self.word_embeddings, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
+
             elif self.config.mode_type == 'complex':
+                """Experimental Function"""
                 fst_rnns = BiRNN(self.config.num_units, scope='first_bi_rnn')
                 merge_output = fst_rnns(self.word_embeddings, self.seq_lengths)
                 # match char output shape to merge_output shape
@@ -107,6 +109,7 @@ class SeqLabelModel(BaseModel):
                 merge_output = tf.add(merge_output, char_output)
                 rnns = BiRNN(self.config.num_units, scope='complex_mode')  # second layer of bi-directional rnn
                 output = rnns(merge_output, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
+
             else:  # default single model
                 rnns = BiRNN(self.config.num_units, scope='single_mode')
                 output = rnns(self.word_embeddings, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
@@ -147,8 +150,7 @@ class SeqLabelModel(BaseModel):
                 self.config.lr *= self.config.lr_decay
             else:
                 self.config.lr = init_lr / (1 + self.config.lr_decay_rate * epoch)
-            # performs early stop and parameters save
-            if cur_score > best_score:
+            if cur_score > best_score:  # performs early stop and parameters save
                 no_imprv_epoch_count = 0
                 self.save_session(epoch)  # save model with a new best score is obtained
                 best_score = cur_score
