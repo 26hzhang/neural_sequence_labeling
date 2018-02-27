@@ -4,7 +4,7 @@ import os
 
 class BaseModel(object):
     def __init__(self, config):
-        self.config = config
+        self.cfg = config
         self.logger = config.logger
         self.sess = None
         self.saver = None
@@ -16,21 +16,21 @@ class BaseModel(object):
 
     def initialize_session(self):
         self.sess = tf.Session()
-        self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
+        self.saver = tf.train.Saver(max_to_keep=self.cfg.max_to_keep)
         self.sess.run(tf.global_variables_initializer())
 
     def restore_last_session(self, ckpt_path=None):
         if ckpt_path is not None:
             ckpt = tf.train.get_checkpoint_state(ckpt_path)
         else:
-            ckpt = tf.train.get_checkpoint_state(self.config.ckpt_path)  # get checkpoint state
+            ckpt = tf.train.get_checkpoint_state(self.cfg.ckpt_path)  # get checkpoint state
         if ckpt and ckpt.model_checkpoint_path:  # restore session
             self.saver.restore(self.sess, ckpt.model_checkpoint_path)
 
     def save_session(self, epoch):
-        if not os.path.exists(self.config.ckpt_path):
-            os.makedirs(self.config.dir_model)
-        self.saver.save(self.sess, self.config.ckpt_path + self.config.model_name, global_step=epoch)
+        if not os.path.exists(self.cfg.ckpt_path):
+            os.makedirs(self.cfg.dir_model)
+        self.saver.save(self.sess, self.cfg.ckpt_path + self.cfg.model_name, global_step=epoch)
 
     def close_session(self):
         self.sess.close()

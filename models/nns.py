@@ -3,7 +3,7 @@ from functools import reduce
 from operator import mul
 from tensorflow.python.ops.rnn_cell_impl import _linear
 from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell
-from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn
+from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as _bidirectional_dynamic_rnn
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
 from tensorflow.python.util import nest
 
@@ -22,13 +22,13 @@ class BiRNN:
     def __call__(self, inputs, seq_len, return_last_state=False, keep_prob=None, is_train=None):
         with tf.variable_scope(self.scope):
             if return_last_state:
-                _, ((_, output_fw), (_, output_bw)) = bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, inputs,
-                                                                                sequence_length=seq_len,
-                                                                                dtype=tf.float32)
+                _, ((_, output_fw), (_, output_bw)) = _bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, inputs,
+                                                                                 sequence_length=seq_len,
+                                                                                 dtype=tf.float32)
                 output = tf.concat([output_fw, output_bw], axis=-1)
             else:
-                (output_fw, output_bw), _ = bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, inputs,
-                                                                      sequence_length=seq_len, dtype=tf.float32)
+                (output_fw, output_bw), _ = _bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, inputs,
+                                                                       sequence_length=seq_len, dtype=tf.float32)
                 output = tf.concat([output_fw, output_bw], axis=-1)
             output = dropout(output, keep_prob, is_train)
         return output
@@ -52,6 +52,16 @@ class StackedBiRNN:
                                                          dtype=tf.float32)
             output = dropout(output, keep_prob, is_train)
         return output
+
+
+def bidirectional_dynamic_rnn(cell_fw, cell_bw, inputs, sequence_length=None, scope=None):
+    flat_inputs = flatten(inputs, 2)  # [-1, seq_len, dim]
+    flat_len = None if sequence_length is None else tf.cast(flatten(sequence_length, 0), dtype=tf.int64)
+    (flat_fw_outputs, flat_bw_outputs), final_state = _bidirectional_dynamic_rnn(
+        cell_fw, cell_bw, flat_inputs, sequence_length=flat_len, dtype=tf.float32, scope=scope)
+    fw_outputs = reconstruct(flat_fw_outputs, inputs, 2)
+    bw_outputs = reconstruct(flat_bw_outputs, inputs, 2)
+    return (fw_outputs, bw_outputs), final_state
 
 
 def dense(inputs, hidden_dim, use_bias=True, scope='dense'):
@@ -89,6 +99,26 @@ def highway_network(arg, num_layers, bias, bias_start=0.0, scope=None, keep_prob
                                 keep_prob=keep_prob, is_train=is_train)
             prev = cur
         return cur
+
+
+def dot_attention(inputs, memory, hidden, keep_prob=1.0, is_train=None, scope="dot_attention"):
+    with tf.variable_scope(scope):
+        d_inputs = dropout(inputs, keep_prob=keep_prob, is_train=is_train)
+        d_memory = dropout(memory, keep_prob=keep_prob, is_train=is_train)
+
+        with tf.variable_scope("attention"):
+            inputs_ = tf.nn.relu(dense(d_inputs, hidden, use_bias=False, scope="inputs"))
+            memory_ = tf.nn.relu(dense(d_memory, hidden, use_bias=False, scope="memory"))
+            outputs = tf.matmul(inputs_, tf.transpose(memory_, [0, 2, 1])) / (hidden ** 0.5)
+            logits = tf.nn.softmax(outputs)
+            outputs = tf.matmul(logits, memory)
+            res = tf.concat([inputs, outputs], axis=-1)
+
+        with tf.variable_scope("gate"):
+            dim = res.get_shape().as_list()[-1]
+            d_res = dropout(res, keep_prob=keep_prob, is_train=is_train)
+            gate = tf.nn.sigmoid(dense(d_res, dim, use_bias=False))
+            return res * gate
 
 
 def dropout(x, keep_prob, is_train, noise_shape=None, seed=None, name=None):
