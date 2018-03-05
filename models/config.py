@@ -35,8 +35,8 @@ class Config(object):
     model_name = 'seq_labeling_{}'.format(train_task)
 
     """set sentence and word maximal length"""
-    max_len_sent = None  # if None, use the max length of sentence in each batch (changeable)
-    max_len_word = None  # if None, use the max length of word in each batch (changeable)
+    # max_len_sent = None  # if None, use the max length of sentence in each batch (changeable)
+    # max_len_word = None  # if None, use the max length of word in each batch (changeable)
 
     """word embeddings"""
     use_pretrained = True  # use pretrained word embeddings (GloVe embeddings)

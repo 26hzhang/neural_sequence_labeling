@@ -21,16 +21,16 @@ class SeqLabelModel(BaseModel):
     def _add_placeholders(self):
         """Define placeholders = entries to computational graph"""
         # shape = (batch size, max length of sentence in batch)
-        self.word_ids = tf.placeholder(tf.int32, shape=[None, self.cfg.max_len_sent], name="word_ids")
+        self.word_ids = tf.placeholder(tf.int32, shape=[None, None], name="word_ids")
         # shape = (batch size)
         self.seq_lengths = tf.placeholder(tf.int32, shape=[None], name="sequence_lengths")
         # shape = (batch size, max length of sentence, max length of word)
-        self.char_ids = tf.placeholder(tf.int32, shape=[None, self.cfg.max_len_sent, self.cfg.max_len_word],
+        self.char_ids = tf.placeholder(tf.int32, shape=[None, None, None],
                                        name="char_ids")
         # shape = (batch_size, max_length of sentence)
-        self.word_lengths = tf.placeholder(tf.int32, shape=[None, self.cfg.max_len_sent], name="word_lengths")
+        self.word_lengths = tf.placeholder(tf.int32, shape=[None, None], name="word_lengths")
         # shape = (batch size, max length of sentence in batch)
-        self.labels = tf.placeholder(tf.int32, shape=[None, self.cfg.max_len_sent], name="labels")
+        self.labels = tf.placeholder(tf.int32, shape=[None, None], name="labels")
         # hyper parameters
         self.keep_prob = tf.placeholder(dtype=tf.float32, name="keep_prob")
         self.lr = tf.placeholder(dtype=tf.float32, name="lr")
@@ -40,11 +40,10 @@ class SeqLabelModel(BaseModel):
         # perform padding of the given data
         if self.cfg.use_char_emb:
             char_ids, word_ids = zip(*words)
-            word_ids, sequence_lengths = pad_sequences(word_ids, self.cfg.max_len_sent, 0)
-            char_ids, word_lengths = pad_sequences(char_ids, pad_tok=0, max_length=self.cfg.max_len_sent,
-                                                   max_length_2=self.cfg.max_len_word, nlevels=2)
+            word_ids, sequence_lengths = pad_sequences(word_ids, pad_tok=0, max_length=None)
+            char_ids, word_lengths = pad_sequences(char_ids, pad_tok=0, max_length=None, max_length_2=None, nlevels=2)
         else:
-            word_ids, sequence_lengths = pad_sequences(words, pad_tok=0, max_length=self.cfg.max_len_sent)
+            word_ids, sequence_lengths = pad_sequences(words, pad_tok=0, max_length=None)
             char_ids = word_lengths = None
         # build feed dictionary
         feed_dict = {self.word_ids: word_ids, self.seq_lengths: sequence_lengths, self.is_train: is_train}
@@ -52,7 +51,7 @@ class SeqLabelModel(BaseModel):
             feed_dict[self.char_ids] = char_ids
             feed_dict[self.word_lengths] = word_lengths
         if labels is not None:
-            labels, _ = pad_sequences(labels, max_length=self.cfg.max_len_sent, pad_tok=0)
+            labels, _ = pad_sequences(labels, pad_tok=0, max_length=None)
             feed_dict[self.labels] = labels
         if lr is not None:
             feed_dict[self.lr] = lr
