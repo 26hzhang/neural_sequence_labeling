@@ -2,81 +2,21 @@ import tensorflow as tf
 from functools import reduce
 from operator import mul
 from tensorflow.python.ops.rnn_cell_impl import _linear
-from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell
-from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as _bidirectional_dynamic_rnn
-from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
 from tensorflow.python.util import nest
 
 
-class BiRNN:
-    def __init__(self, num_units, state_is_tuple=True, cell_type='lstm', scope='bi_rnn'):
-        self.num_units = num_units
-        if cell_type == 'gru':
-            self.cell_fw = GRUCell(self.num_units)
-            self.cell_bw = GRUCell(self.num_units)
-        else:  # default
-            self.cell_fw = LSTMCell(self.num_units, state_is_tuple=state_is_tuple)
-            self.cell_bw = LSTMCell(self.num_units, state_is_tuple=state_is_tuple)
-        self.scope = scope
-
-    def __call__(self, inputs, seq_len, return_last_state=False, keep_prob=None, is_train=None):
-        with tf.variable_scope(self.scope):
-            if return_last_state:
-                _, ((_, output_fw), (_, output_bw)) = _bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, inputs,
-                                                                                 sequence_length=seq_len,
-                                                                                 dtype=tf.float32)
-                output = tf.concat([output_fw, output_bw], axis=-1)
-            else:
-                (output_fw, output_bw), _ = _bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, inputs,
-                                                                       sequence_length=seq_len, dtype=tf.float32)
-                output = tf.concat([output_fw, output_bw], axis=-1)
-            output = dropout(output, keep_prob, is_train)
-        return output
-
-
-class StackedBiRNN:
-    def __init__(self, num_layers, num_units, cell_type='lstm', scope='stacked_bi_rnn'):
-        self.num_layers = num_layers
-        self.num_units = num_units
-        if cell_type == 'gru':
-            self.cells_fw = [GRUCell(self.num_units) for _ in range(self.num_layers)]
-            self.cells_bw = [GRUCell(self.num_units) for _ in range(self.num_layers)]
-        else:  # default
-            self.cells_fw = [LSTMCell(self.num_units) for _ in range(self.num_layers)]
-            self.cells_bw = [LSTMCell(self.num_units) for _ in range(self.num_layers)]
-        self.scope = scope
-
-    def __call__(self, inputs, seq_len, keep_prob=None, is_train=None):
-        with tf.variable_scope(self.scope):
-            output, *_ = stack_bidirectional_dynamic_rnn(self.cells_fw, self.cells_bw, inputs, sequence_length=seq_len,
-                                                         dtype=tf.float32)
-            output = dropout(output, keep_prob, is_train)
-        return output
-
-
-def bidirectional_dynamic_rnn(cell_fw, cell_bw, inputs, sequence_length=None, scope=None):
-    flat_inputs = flatten(inputs, 2)  # [-1, seq_len, dim]
-    flat_len = None if sequence_length is None else tf.cast(flatten(sequence_length, 0), dtype=tf.int64)
-    (flat_fw_outputs, flat_bw_outputs), final_state = _bidirectional_dynamic_rnn(
-        cell_fw, cell_bw, flat_inputs, sequence_length=flat_len, dtype=tf.float32, scope=scope)
-    fw_outputs = reconstruct(flat_fw_outputs, inputs, 2)
-    bw_outputs = reconstruct(flat_bw_outputs, inputs, 2)
-    return (fw_outputs, bw_outputs), final_state
-
-
-def dense(inputs, hidden_dim, use_bias=True, scope='dense'):
+def dense(inputs, hidden, use_bias=True, activation=None, scope="dense"):
     with tf.variable_scope(scope):
-        shape = tf.shape(inputs)
-        dim = inputs.get_shape().as_list()[-1]
-        out_shape = [shape[idx] for idx in range(len(inputs.get_shape().as_list()) - 1)] + [hidden_dim]
-        flat_inputs = tf.reshape(inputs, [-1, dim])
-        w = tf.get_variable("W", shape=[dim, hidden_dim], dtype=tf.float32)
-        output = tf.matmul(flat_inputs, w)
+        flat_inputs = flatten(inputs, keep=1)
+        w = tf.get_variable("weight", [inputs.get_shape().as_list()[-1], hidden], dtype=tf.float32)
+        res = tf.matmul(flat_inputs, w)
         if use_bias:
-            b = tf.get_variable("b", shape=[hidden_dim], dtype=tf.float32, initializer=tf.constant_initializer(0.))
-            output = tf.nn.bias_add(output, b)
-        output = tf.reshape(output, out_shape)
-        return output
+            b = tf.get_variable("bias", [hidden], initializer=tf.constant_initializer(0.))
+            res = tf.nn.bias_add(res, b)
+        if activation is not None:
+            res = activation(res)
+        res = reconstruct(res, ref=inputs, keep=1)
+        return res
 
 
 def highway_layer(arg, bias, bias_start=0.0, scope=None, keep_prob=None, is_train=None):
@@ -182,13 +122,26 @@ def flatten(tensor, keep):
     return flat
 
 
-def reconstruct(tensor, ref, keep):
+def reconstruct(tensor, ref, keep, remove_shape=None):
     ref_shape = ref.get_shape().as_list()
     tensor_shape = tensor.get_shape().as_list()
     ref_stop = len(ref_shape) - keep
     tensor_start = len(tensor_shape) - keep
+    if remove_shape is not None:
+        tensor_start = tensor_start + remove_shape
     pre_shape = [ref_shape[i] or tf.shape(ref)[i] for i in range(ref_stop)]
     keep_shape = [tensor_shape[i] or tf.shape(tensor)[i] for i in range(tensor_start, len(tensor_shape))]
     target_shape = pre_shape + keep_shape
     out = tf.reshape(tensor, target_shape)
     return out
+
+
+def viterbi_decode(logits, trans_params, sequence_lengths, scope=None):
+    with tf.variable_scope(scope or 'viterbi_decode'):
+        viterbi_sequences = []
+        # iterate over the sentences due to no batching in viterbi_decode
+        for logit, sequence_length in zip(logits, sequence_lengths):
+            logit = logit[:sequence_length]  # keep only the valid steps
+            viterbi_seq, viterbi_score = tf.contrib.crf.viterbi_decode(logit, trans_params)
+            viterbi_sequences += [viterbi_seq]
+    return viterbi_sequences

@@ -1,6 +1,6 @@
 import os
-from models.data_process import load_vocab, load_glove_embeddings
-from models.logger import get_logger
+from utils.data_process import load_vocab, load_glove_embeddings
+from utils.logger import get_logger
 
 
 class Config(object):
@@ -76,8 +76,10 @@ class Config(object):
     highway_num_layers = 2
 
     """model parameters"""
-    mode_type = 'single'  # single, stack, complex
+    mode_type = 'densely_connected'  # single, stack, densely_connected
     num_layers = 2  # used for stack mode
     cell_type = 'lstm'  # lstm, gru
     num_units = 300  # LSTM hidden neuron size for labeling model
+    num_layers_dc = 4  # for densely connected bi-rnn
+    num_units_list = [50, 50, 50, 300]  # for densely connected bi-rnn
     use_crf = True  # use CRF

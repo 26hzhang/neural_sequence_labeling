@@ -1,13 +1,13 @@
 import tensorflow as tf
+import numpy as np
+from utils import pad_sequences, compute_accuracy_f1, batch_iter, Progbar
 from models.base_model import BaseModel
-from models import pad_sequences, viterbi_decode, compute_accuracy_f1, batch_iter, Progbar
-from models import highway_network, multi_conv1d, BiRNN, StackedBiRNN, dense, dropout
-import sys
+from models.nns import highway_network, multi_conv1d, dense, dropout, viterbi_decode
+from models.rnns import BiRNN, StackBiRNN, DenseConnectBiRNN
 
 
 class SeqLabelModel(BaseModel):
     def __init__(self, config):
-        sys.stdout.write('Build model...')
         super(SeqLabelModel, self).__init__(config)
         self._add_placeholders()
         self._build_embeddings_op()
@@ -15,8 +15,8 @@ class SeqLabelModel(BaseModel):
         self._build_pred_op()
         self._build_loss_op()
         self._build_train_op(self.cfg.lr_method, self.lr, self.loss, self.cfg.grad_clip)
+        print('params number: {}'.format(np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()])))
         self.initialize_session()
-        sys.stdout.write(' done.\n')
 
     def _add_placeholders(self):
         """Define placeholders = entries to computational graph"""
@@ -25,8 +25,7 @@ class SeqLabelModel(BaseModel):
         # shape = (batch size)
         self.seq_lengths = tf.placeholder(tf.int32, shape=[None], name="sequence_lengths")
         # shape = (batch size, max length of sentence, max length of word)
-        self.char_ids = tf.placeholder(tf.int32, shape=[None, None, None],
-                                       name="char_ids")
+        self.char_ids = tf.placeholder(tf.int32, shape=[None, None, None], name="char_ids")
         # shape = (batch_size, max_length of sentence)
         self.word_lengths = tf.placeholder(tf.int32, shape=[None, None], name="word_lengths")
         # shape = (batch size, max length of sentence in batch)
@@ -74,18 +73,13 @@ class SeqLabelModel(BaseModel):
                 _char_embeddings = tf.get_variable(name='_char_embeddings', dtype=tf.float32, trainable=True,
                                                    shape=[self.cfg.char_vocab_size, self.cfg.char_dim])
                 char_embeddings = tf.nn.embedding_lookup(_char_embeddings, self.char_ids, name="char_embeddings")
-                s = tf.shape(char_embeddings)  # [batch size, max length of sentence, max length of word, char_dim]
                 if self.cfg.char_rep_method == 'rnn':
-                    char_embeddings = tf.reshape(char_embeddings, shape=[s[0] * s[1], s[-2], self.cfg.char_dim])
-                    word_lengths = tf.reshape(self.word_lengths, shape=[s[0] * s[1]])
-                    char_bi_rnn = BiRNN(self.cfg.num_units_char, scope='char_rnn')
-                    output = char_bi_rnn(char_embeddings, word_lengths, return_last_state=True)
+                    char_rnn = BiRNN(self.cfg.num_units_char)
+                    char_output = char_rnn(char_embeddings, self.word_lengths, return_last_state=True)
                 else:  # cnn model for char representation
-                    output = multi_conv1d(char_embeddings, self.cfg.filter_sizes, self.cfg.heights, "VALID",
-                                          self.is_train, self.keep_prob, scope="char_cnn")
-                # shape = (batch size, max sentence length, char representation size)
-                self.char_output = tf.reshape(output, [s[0], s[1], self.cfg.char_out_size])
-                word_embeddings = tf.concat([word_embeddings, self.char_output], axis=-1)
+                    char_output = multi_conv1d(char_embeddings, self.cfg.filter_sizes, self.cfg.heights, "VALID",
+                                               self.is_train, self.keep_prob)
+                word_embeddings = tf.concat([word_embeddings, char_output], axis=-1)
         if self.cfg.use_highway:
             with tf.variable_scope("highway"):
                 self.word_embeddings = highway_network(word_embeddings, self.cfg.highway_num_layers, bias=True,
@@ -96,22 +90,19 @@ class SeqLabelModel(BaseModel):
     def _build_model_op(self):
         with tf.variable_scope('bidirectional_rnn'):
             if self.cfg.mode_type == 'stack':  # n-layers stacked bidirectional rnn
-                rnns = StackedBiRNN(self.cfg.num_layers, self.cfg.num_units, scope='stack_mode')
-                output = rnns(self.word_embeddings, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
+                rnns = StackBiRNN(self.cfg.num_layers, self.cfg.num_units, scope='stack_mode')
+                output = rnns(self.word_embeddings, self.seq_lengths)
+                output = dropout(output, keep_prob=self.keep_prob, is_train=self.is_train)
 
-            elif self.cfg.mode_type == 'complex':
-                """Experimental Function"""
-                fst_rnns = BiRNN(self.cfg.num_units, scope='first_bi_rnn')
-                merge_output = fst_rnns(self.word_embeddings, self.seq_lengths)
-                # match char output shape to merge_output shape
-                char_output = dense(self.char_output, 2 * self.cfg.num_units, scope='project')
-                merge_output = tf.add(merge_output, char_output)
-                rnns = BiRNN(self.cfg.num_units, scope='complex_mode')  # second layer of bi-directional rnn
-                output = rnns(merge_output, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
+            elif self.cfg.mode_type == 'densely_connected':
+                rnns = DenseConnectBiRNN(self.cfg.num_layers_dc, self.cfg.num_units_list)
+                output = rnns(self.word_embeddings, self.seq_lengths)
+                output = dropout(output, keep_prob=self.keep_prob, is_train=self.is_train)
 
             else:  # default single model
                 rnns = BiRNN(self.cfg.num_units, scope='single_mode')
-                output = rnns(self.word_embeddings, self.seq_lengths, keep_prob=self.keep_prob, is_train=self.is_train)
+                output = rnns(self.word_embeddings, self.seq_lengths)
+                output = dropout(output, keep_prob=self.keep_prob, is_train=self.is_train)
 
         self.logits = dense(output, self.cfg.tag_vocab_size, use_bias=True, scope='project')
 

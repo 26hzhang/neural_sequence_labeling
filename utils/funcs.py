@@ -1,18 +1,6 @@
-import tensorflow as tf
 import numpy as np
 
 NONE = 'O'
-
-
-def viterbi_decode(logits, trans_params, sequence_lengths, scope=None):
-    with tf.variable_scope(scope or 'viterbi_decode'):
-        viterbi_sequences = []
-        # iterate over the sentences due to no batching in viterbi_decode
-        for logit, sequence_length in zip(logits, sequence_lengths):
-            logit = logit[:sequence_length]  # keep only the valid steps
-            viterbi_seq, viterbi_score = tf.contrib.crf.viterbi_decode(logit, trans_params)
-            viterbi_sequences += [viterbi_seq]
-    return viterbi_sequences
 
 
 def compute_accuracy_f1(ground_truth, predict_labels, seq_lengths, train_task, tag_vocab, ):
@@ -102,3 +90,40 @@ def get_chunks(seq, tags):
         chunk = (chunk_type, chunk_start, len(seq))
         chunks.append(chunk)
     return chunks
+
+
+def align_data(data):
+    """Given dict with lists, creates aligned strings
+    Args:
+        data: (dict) data["x"] = ["I", "love", "you"]
+              (dict) data["y"] = ["O", "O", "O"]
+    Returns:
+        data_aligned: (dict) data_align["x"] = "I love you"
+                             data_align["y"] = "O O    O  "
+    """
+    spacings = [max([len(seq[i]) for seq in data.values()]) for i in range(len(data[list(data.keys())[0]]))]
+    data_aligned = dict()
+    # for each entry, create aligned string
+    for key, seq in data.items():
+        str_aligned = ''
+        for token, spacing in zip(seq, spacings):
+            str_aligned += token + ' ' * (spacing - len(token) + 1)
+        data_aligned[key] = str_aligned
+    return data_aligned
+
+
+def interactive_shell(model, word_processor, idx_to_tag):
+    """Creates interactive shell to play with model"""
+    while True:
+        sentence = input('input>\n')
+        words_raw = sentence.strip().split(' ')
+        if words_raw == ['exit']:
+            break
+        words = [word_processor.fit(w) for w in words_raw]
+        if type(words[0]) == tuple:
+            words = zip(*words)
+        pred_ids, _ = model.predict([words])
+        preds = [idx_to_tag[idx] for idx in list(pred_ids[0])]
+        to_print = align_data({'input': words_raw, 'output': preds})
+        for key, seq in to_print.items():
+            model.logger.info(seq)

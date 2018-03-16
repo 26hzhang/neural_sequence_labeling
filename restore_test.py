@@ -1,7 +1,6 @@
 from models.model import SeqLabelModel
 from models.config import Config
-from models.data_process import Dataset, Processor
-from train_test import interactive_shell
+from utils import Dataset, Processor, interactive_shell
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # suppress tensorflow warnings

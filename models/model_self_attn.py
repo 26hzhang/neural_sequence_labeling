@@ -1,8 +1,9 @@
 import tensorflow as tf
 from tensorflow.python.ops.rnn_cell import LSTMCell
 from models.base_model import BaseModel
-from models import pad_sequences, viterbi_decode, compute_accuracy_f1, batch_iter, Progbar
-from models import highway_network, multi_conv1d, dense, dropout, bidirectional_dynamic_rnn, dot_attention
+from utils import pad_sequences, compute_accuracy_f1, batch_iter, Progbar
+from models.nns import highway_network, multi_conv1d, dense, dropout, dot_attention, viterbi_decode
+from models.rnns import bidirectional_dynamic_rnn
 import numpy as np
 
 np.random.seed(12345)
