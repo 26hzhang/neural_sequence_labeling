@@ -1,8 +1,8 @@
 import tensorflow as tf
-from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell
+from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell, RNNCell
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as _bidirectional_dynamic_rnn
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
-from models.nns import flatten, reconstruct
+from models.nns import flatten, reconstruct, dense
 
 
 class BiRNN:  # used as encoding or char representation
@@ -91,6 +91,42 @@ class DenseConnectBiRNN:
                     cur_inputs = cur_outputs
             output = reconstruct(cur_inputs, ref=inputs, keep=2)
             return output
+
+
+class AttentionCell(RNNCell):  # attention with late fusion
+    """Implement of https://pdfs.semanticscholar.org/8785/efdad2abc384d38e76a84fb96d19bbe788c1.pdf?_ga=2.156364859.18139
+    40814.1518068648-1853451355.1518068648
+    refer: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/ops/rnn_cell_impl.py"""
+    def __init__(self, num_units, memory, pmemory, cell_type='lstm'):
+        super(AttentionCell, self).__init__()
+        self._cell = LSTMCell(num_units) if cell_type == 'lstm' else GRUCell(num_units)
+        self.num_units = num_units
+        self.memory = memory
+        self.pmemory = pmemory
+        self.mem_units = memory.get_shape().as_list()[-1]
+
+    @property
+    def state_size(self):
+        return self._cell.state_size
+
+    @property
+    def output_size(self):
+        return self._cell.output_size
+
+    def __call__(self, inputs, state, scope=None):
+        c, m = state
+        # (max_time, batch_size, att_unit)
+        ha = tf.nn.tanh(tf.add(self.pmemory, dense(m, self.mem_units, use_bias=False, scope='wah')))
+        alphas = tf.squeeze(tf.exp(dense(ha, hidden=1, use_bias=False, scope='way')), axis=[-1])
+        alphas = tf.div(alphas, tf.reduce_sum(alphas, axis=0, keep_dims=True))  # (max_time, batch_size)
+        # (batch_size, att_units)
+        w_context = tf.reduce_sum(tf.multiply(self.memory, tf.expand_dims(alphas, axis=-1)), axis=0)
+        h, new_state = self._cell(inputs, state)
+        lfc = dense(w_context, self.num_units, use_bias=False, scope='wfc')
+        # (batch_size, num_units)
+        fw = tf.sigmoid(dense(lfc, self.num_units, use_bias=False, scope='wff') + dense(h, self.num_units, scope='wfh'))
+        hft = tf.multiply(lfc, fw) + h  # (batch_size, num_units)
+        return hft, new_state
 
 
 def bidirectional_dynamic_rnn(cell_fw, cell_bw, inputs, sequence_length=None, scope=None):

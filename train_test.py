@@ -2,14 +2,13 @@ from models.model import SeqLabelModel
 from utils import Dataset, Processor, interactive_shell
 from models.config import Config
 import os
-import sys
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # suppress tensorflow warnings
 
 
 def main():
     # create configurations
-    sys.stdout.write('load pre-defined configs and pre-processed dataset...')
+    print('load pre-defined configs and pre-processed dataset...')
     config = Config()
     # create word and tag processor
     word_processor = Processor(config.word_vocab_filename, config.char_vocab_filename, lowercase=True, use_chars=True,
@@ -19,7 +18,6 @@ def main():
     train_set = Dataset(config.train_filename, config.tag_idx, word_processor, tag_processor, max_iter=config.max_iter)
     dev_set = Dataset(config.dev_filename, config.tag_idx, word_processor, tag_processor, max_iter=config.max_iter)
     test_set = Dataset(config.test_filename, config.tag_idx, word_processor, tag_processor, max_iter=config.max_iter)
-    sys.stdout.write(' done.\n')
     # build model
     model = SeqLabelModel(config)
     model.train(train_set, dev_set, test_set)
