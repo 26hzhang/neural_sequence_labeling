@@ -3,7 +3,7 @@ import numpy as np
 from tensorflow.python.ops.rnn import dynamic_rnn
 from utils import pad_sequences, compute_accuracy_f1, batch_iter, Progbar
 from models.base_model import BaseModel
-from models.nns import highway_network, multi_conv1d, dense, dropout, viterbi_decode, dot_attention
+from models.nns import highway_network, multi_conv1d, dense, dropout, viterbi_decode
 from models.rnns import BiRNN, DenseConnectBiRNN, AttentionCell
 
 
@@ -106,10 +106,6 @@ class SeqLabelModel(BaseModel):
                                  time_major=True)
             att = tf.transpose(att, [1, 0, 2])
             print("attention shape: {}".format(att.get_shape().as_list()))
-
-        '''with tf.variable_scope("self-attention"):
-            self_att = dot_attention(att, att, self.cfg.num_units, keep_prob=self.cfg.keep_prob, is_train=self.is_train)
-            print("self-attention outputs shape: {}".format(self_att.get_shape().as_list()))'''
 
         with tf.variable_scope("project"):
             self.logits = dense(att, self.cfg.tag_vocab_size, use_bias=True)

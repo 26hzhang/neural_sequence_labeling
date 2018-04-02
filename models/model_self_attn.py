@@ -1,9 +1,8 @@
 import tensorflow as tf
-from tensorflow.python.ops.rnn_cell import LSTMCell
 from models.base_model import BaseModel
 from utils import pad_sequences, compute_accuracy_f1, batch_iter, Progbar
 from models.nns import highway_network, multi_conv1d, dense, dropout, dot_attention, viterbi_decode
-from models.rnns import bidirectional_dynamic_rnn, BiRNN
+from models.rnns import BiRNN
 import numpy as np
 
 np.random.seed(12345)
@@ -95,34 +94,12 @@ class SeqLabelModel(BaseModel):
         with tf.variable_scope('encoder'):
             encoder = BiRNN(self.cfg.num_units)
             enc_outputs = encoder(self.word_embeddings, self.seq_lengths)
-            # cell_fw = LSTMCell(num_units=self.cfg.num_units)
-            # cell_bw = LSTMCell(num_units=self.cfg.num_units)
-            # outputs, _ = bidirectional_dynamic_rnn(cell_fw, cell_bw, self.word_embeddings, self.seq_lengths)
-            # enc_outputs = tf.concat(outputs, axis=-1)
             print('encoder output shape: {}'.format(enc_outputs.get_shape().as_list()))
-
-        '''with tf.variable_scope('attention'):
-            attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(
-                num_units=self.cfg.num_units, memory=enc_outputs, memory_sequence_length=self.seq_lengths)
-            cell_fw = LSTMCell(num_units=self.cfg.num_units)
-            cell_bw = LSTMCell(num_units=self.cfg.num_units)
-            attn_cell_fw = tf.contrib.seq2seq.AttentionWrapper(cell_fw, attention_mechanism)
-            attn_cell_bw = tf.contrib.seq2seq.AttentionWrapper(cell_bw, attention_mechanism)
-            outputs, _ = bidirectional_dynamic_rnn(attn_cell_fw, attn_cell_bw, enc_outputs, self.seq_lengths)
-            attn_outputs = tf.concat(outputs, axis=-1)
-            print('bidirectional attention output shape: {}'.format(attn_outputs.get_shape().as_list()))'''
 
         with tf.variable_scope('self_attention'):
             self_att = dot_attention(enc_outputs, enc_outputs, self.cfg.num_units, keep_prob=self.keep_prob,
                                      is_train=self.is_train)
             print('self-attention output shape: {}'.format(self_att.get_shape().as_list()))
-
-        '''with tf.variable_scope('decoder'):
-            cell_fw = LSTMCell(num_units=self.cfg.num_units)
-            cell_bw = LSTMCell(num_units=self.cfg.num_units)
-            outputs, _ = bidirectional_dynamic_rnn(cell_fw, cell_bw, self_att, self.seq_lengths)
-            dec_outputs = tf.concat(outputs, axis=-1)
-            print('decoder output shape: {}'.format(dec_outputs.get_shape().as_list()))'''
 
         with tf.variable_scope('project'):
             self.logits = dense(self_att, self.cfg.tag_vocab_size, use_bias=True)

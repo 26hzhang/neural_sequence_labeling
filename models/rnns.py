@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell, RNNCell
-from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as _bidirectional_dynamic_rnn
+from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
 from models.nns import flatten, reconstruct, dense
 
@@ -16,8 +16,8 @@ class BiRNN:  # used as encoding or char representation
         with tf.variable_scope(self.scope):
             flat_inputs = flatten(inputs, keep=2)  # reshape to [-1, max_time, dim]
             seq_len = flatten(seq_len, keep=0)  # reshape to [x] (one dimension sequence)
-            outputs, ((_, h_fw), (_, h_bw)) = _bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, flat_inputs,
-                                                                         sequence_length=seq_len, dtype=tf.float32)
+            outputs, ((_, h_fw), (_, h_bw)) = bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, flat_inputs,
+                                                                        sequence_length=seq_len, dtype=tf.float32)
             if return_last_state:  # return last states
                 output = tf.concat([h_fw, h_bw], axis=-1)  # shape = [-1, 2 * num_units]
                 output = reconstruct(output, ref=inputs, keep=2, remove_shape=1)  # remove the max_time shape
@@ -127,13 +127,3 @@ class AttentionCell(RNNCell):  # attention with late fusion
         fw = tf.sigmoid(dense(lfc, self.num_units, use_bias=False, scope='wff') + dense(h, self.num_units, scope='wfh'))
         hft = tf.multiply(lfc, fw) + h  # (batch_size, num_units)
         return hft, new_state
-
-
-def bidirectional_dynamic_rnn(cell_fw, cell_bw, inputs, sequence_length=None, scope=None):
-    flat_inputs = flatten(inputs, 2)  # [-1, seq_len, dim]
-    flat_len = None if sequence_length is None else tf.cast(flatten(sequence_length, 0), dtype=tf.int64)
-    (flat_fw_outputs, flat_bw_outputs), final_state = _bidirectional_dynamic_rnn(
-        cell_fw, cell_bw, flat_inputs, sequence_length=flat_len, dtype=tf.float32, scope=scope)
-    fw_outputs = reconstruct(flat_fw_outputs, inputs, 2)
-    bw_outputs = reconstruct(flat_bw_outputs, inputs, 2)
-    return (fw_outputs, bw_outputs), final_state
