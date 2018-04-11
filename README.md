@@ -1,6 +1,6 @@
 # Neural Sequence Labeling
 
-![Authour](https://img.shields.io/badge/Author-Zhang%20Hao%20(Isaac%20Changhau)-blue.svg) ![](https://img.shields.io/badge/MacOS%20High%20Sierra-10.13.2-green.svg) ![](https://img.shields.io/badge/Python-3.6-brightgreen.svg) ![](https://img.shields.io/badge/TensorFlow-1.4.0-yellowgreen.svg)
+![Authour](https://img.shields.io/badge/Author-Zhang%20Hao%20(Isaac%20Changhau)-blue.svg) ![System](https://img.shields.io/badge/MacOS%20High%20Sierra-10.13.2-green.svg) ![Python](https://img.shields.io/badge/Python-3.6-brightgreen.svg) ![Tensorflow](https://img.shields.io/badge/TensorFlow-1.4.0-yellowgreen.svg)
 
 A TensorFlow implementation of Neural Sequence Labeling model, which is able to tackle Part-of-Speech (POS) Tagging, Chunking and Named Entity Recognition (NER) tasks. This repository is inspired after reading the following papers about sequence labeling:
 - [Named Entity Recognition with Bidirectional LSTM-CNNs](https://arxiv.org/pdf/1511.08308.pdf)
@@ -11,7 +11,7 @@ A TensorFlow implementation of Neural Sequence Labeling model, which is able to 
 - [Part-of-Speech Tagging from 97% to 100%: Is It Time for Some Linguistics?](https://nlp.stanford.edu/pubs/CICLing2011-manning-tagging.pdf)
 - [Part-of-Speech Tagging with Bidirectional Long Short-Term Memory Recurrent Neural Network](https://arxiv.org/pdf/1510.06168.pdf)
 
-This model follows the structure of `LSTM + CRF + Chars Embeddings (RNN/CNN)`, and several variant modules are available, like single bi-direct dynamic rnn, stacked bi-direct dynamic rnn and complex stacked bi-direct rnn (enhance the usage of char embeddings). RNN cell can use LSTM or GRU, and etc.
+This model follows the structure of `RNNs + CRF + Chars Embeddings (RNN/CNN)`, and several variant modules are available, like single bi-RNN, stacked bi-RNN and densely connected bi-RNN as well as experiments on introducing the attention mechanism (dot attention, Bahdanau attention and etc). RNN cell can use LSTM or GRU, and etc.
 
 The performance (**F1 Score**) of this neural sequence labeling model on *NER* task is ***90.00~91.00***, which is near to the state-of-the-art performance (highest reported: `F1 Score = 91.21`, [ref. link](https://www.quora.com/What-is-the-current-state-of-the-art-in-Named-Entity-Recognition-NER)).
 
