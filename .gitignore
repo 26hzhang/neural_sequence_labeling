@@ -2,3 +2,5 @@
 ckpt/
 models/__pycache__
 .DS_Store
+utils/__pycache__
+
