@@ -1,4 +1,4 @@
-from models.model import SeqLabelModel
+from models.model_self_attn import SeqLabelModel
 from utils import Dataset, Processor, interactive_shell
 from models.config import Config
 import os

@@ -1,7 +1,7 @@
 import tensorflow as tf
 from models.base_model import BaseModel
 from utils import pad_sequences, compute_accuracy_f1, batch_iter, Progbar
-from models.nns import highway_network, multi_conv1d, dense, dropout, dot_attention, viterbi_decode
+from models.nns import highway_network, multi_conv1d, dropout, dot_attention, viterbi_decode
 from models.rnns import BiRNN
 import numpy as np
 
@@ -102,7 +102,7 @@ class SeqLabelModel(BaseModel):
             print('self-attention output shape: {}'.format(self_att.get_shape().as_list()))
 
         with tf.variable_scope('project'):
-            self.logits = dense(self_att, self.cfg.tag_vocab_size, use_bias=True)
+            self.logits = tf.layers.dense(self_att, self.cfg.tag_vocab_size, use_bias=True, name='project')
             print('projected output (logits) shape: {}'.format(self.logits.get_shape().as_list()))
 
     def _build_loss_op(self):
@@ -119,7 +119,7 @@ class SeqLabelModel(BaseModel):
         if not self.cfg.use_crf:
             self.labels_pred = tf.cast(tf.argmax(self.logits, axis=-1), tf.int32)
 
-    def train(self, train_set, dev_set, test_set, start_epoch=1, shuffle=True):
+    def train(self, train_set, dev_set, test_set, start_epoch=1):
         self.logger.info('Start training...')
         best_score = 0  # store the current best f1 score on dev_set, updated if new best one is derived
         no_imprv_epoch_count = 0  # count the continuous no improvement epochs
@@ -127,8 +127,6 @@ class SeqLabelModel(BaseModel):
         for epoch in range(start_epoch, self.cfg.epochs + 1):  # run each epoch
             self.logger.info('Epoch %2d/%2d:' % (epoch, self.cfg.epochs))
             prog = Progbar(target=(len(train_set) + self.cfg.batch_size - 1) // self.cfg.batch_size)  # nbatches
-            if shuffle:
-                np.random.shuffle(train_set)  # shuffle training dataset every epoch
             for i, (words, labels) in enumerate(batch_iter(train_set, self.cfg.batch_size)):
                 feed_dict, _ = self._get_feed_dict(words, True, labels, self.cfg.lr, self.cfg.keep_prob)
                 _, train_loss = self.sess.run([self.train_op, self.loss], feed_dict=feed_dict)

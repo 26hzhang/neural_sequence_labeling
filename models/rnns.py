@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell, RNNCell
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
-from models.nns import flatten, reconstruct, dense
+from models.nns import flatten, reconstruct
 
 
 class BiRNN:  # used as encoding or char representation
@@ -116,14 +116,15 @@ class AttentionCell(RNNCell):  # attention with late fusion
     def __call__(self, inputs, state, scope=None):
         c, m = state
         # (max_time, batch_size, att_unit)
-        ha = tf.nn.tanh(tf.add(self.pmemory, dense(m, self.mem_units, use_bias=False, scope='wah')))
-        alphas = tf.squeeze(tf.exp(dense(ha, hidden=1, use_bias=False, scope='way')), axis=[-1])
+        ha = tf.nn.tanh(tf.add(self.pmemory, tf.layers.dense(m, self.mem_units, use_bias=False, name='wah')))
+        alphas = tf.squeeze(tf.exp(tf.layers.dense(ha, 1, use_bias=False, name='way')), axis=[-1])
         alphas = tf.div(alphas, tf.reduce_sum(alphas, axis=0, keep_dims=True))  # (max_time, batch_size)
         # (batch_size, att_units)
         w_context = tf.reduce_sum(tf.multiply(self.memory, tf.expand_dims(alphas, axis=-1)), axis=0)
         h, new_state = self._cell(inputs, state)
-        lfc = dense(w_context, self.num_units, use_bias=False, scope='wfc')
+        lfc = tf.layers.dense(w_context, self.num_units, use_bias=False, name='wfc')
         # (batch_size, num_units)
-        fw = tf.sigmoid(dense(lfc, self.num_units, use_bias=False, scope='wff') + dense(h, self.num_units, scope='wfh'))
+        fw = tf.sigmoid(tf.layers.dense(lfc, self.num_units, use_bias=False, name='wff') +
+                        tf.layers.dense(h, self.num_units, name='wfh'))
         hft = tf.multiply(lfc, fw) + h  # (batch_size, num_units)
         return hft, new_state

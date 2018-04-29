@@ -5,20 +5,6 @@ from tensorflow.python.ops.rnn_cell_impl import _linear
 from tensorflow.python.util import nest
 
 
-def dense(inputs, hidden, use_bias=True, activation=None, scope="dense"):
-    with tf.variable_scope(scope):
-        flat_inputs = flatten(inputs, keep=1)
-        w = tf.get_variable("weight", [inputs.get_shape().as_list()[-1], hidden], dtype=tf.float32)
-        res = tf.matmul(flat_inputs, w)
-        if use_bias:
-            b = tf.get_variable("bias", [hidden], initializer=tf.constant_initializer(0.))
-            res = tf.nn.bias_add(res, b)
-        if activation is not None:
-            res = activation(res)
-        res = reconstruct(res, ref=inputs, keep=1)
-        return res
-
-
 def highway_layer(arg, bias, bias_start=0.0, scope=None, keep_prob=None, is_train=None):
     with tf.variable_scope(scope or "highway_layer"):
         d = arg.get_shape()[-1]
@@ -47,8 +33,8 @@ def dot_attention(inputs, memory, hidden, keep_prob=1.0, is_train=None, scope="d
         d_memory = dropout(memory, keep_prob=keep_prob, is_train=is_train)
 
         with tf.variable_scope("attention"):
-            inputs_ = tf.nn.relu(dense(d_inputs, hidden, use_bias=False, scope="inputs"))
-            memory_ = tf.nn.relu(dense(d_memory, hidden, use_bias=False, scope="memory"))
+            inputs_ = tf.nn.relu(tf.layers.dense(d_inputs, hidden, use_bias=False, name='inputs'))
+            memory_ = tf.nn.relu(tf.layers.dense(d_memory, hidden, use_bias=False, name='memory'))
             outputs = tf.matmul(inputs_, tf.transpose(memory_, [0, 2, 1])) / (hidden ** 0.5)
             logits = tf.nn.softmax(outputs)
             outputs = tf.matmul(logits, memory)
@@ -57,7 +43,7 @@ def dot_attention(inputs, memory, hidden, keep_prob=1.0, is_train=None, scope="d
         with tf.variable_scope("gate"):
             dim = res.get_shape().as_list()[-1]
             d_res = dropout(res, keep_prob=keep_prob, is_train=is_train)
-            gate = tf.nn.sigmoid(dense(d_res, dim, use_bias=False))
+            gate = tf.nn.sigmoid(tf.layers.dense(d_res, dim, use_bias=False, name='gate'))
             return res * gate
 
 

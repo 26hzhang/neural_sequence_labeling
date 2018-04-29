@@ -3,7 +3,7 @@ import numpy as np
 from tensorflow.python.ops.rnn import dynamic_rnn
 from utils import pad_sequences, compute_accuracy_f1, batch_iter, Progbar
 from models.base_model import BaseModel
-from models.nns import highway_network, multi_conv1d, dense, dropout, viterbi_decode
+from models.nns import highway_network, multi_conv1d, dropout, viterbi_decode
 from models.rnns import BiRNN, DenseConnectBiRNN, AttentionCell
 
 
@@ -98,7 +98,7 @@ class SeqLabelModel(BaseModel):
 
         with tf.variable_scope("attention"):
             # performs bahdanau attention with late fusion
-            proj_context = dense(context, 2 * self.cfg.num_units)
+            proj_context = tf.layers.dense(context, 2 * self.cfg.num_units, use_bias=True, name='project')
             context = tf.transpose(context, [1, 0, 2])
             proj_context = tf.transpose(proj_context, [1, 0, 2])
             att_cell = AttentionCell(self.cfg.num_units, context, proj_context)
@@ -108,7 +108,7 @@ class SeqLabelModel(BaseModel):
             print("attention shape: {}".format(att.get_shape().as_list()))
 
         with tf.variable_scope("project"):
-            self.logits = dense(att, self.cfg.tag_vocab_size, use_bias=True)
+            self.logits = tf.layers.dense(att, self.cfg.tag_vocab_size, use_bias=True)
             print("logits shape: {}".format(self.logits.get_shape().as_list()))
 
     def _build_loss_op(self):

@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from utils import pad_sequences, compute_accuracy_f1, batch_iter, Progbar
 from models.base_model import BaseModel
-from models.nns import highway_network, multi_conv1d, dense, dropout, viterbi_decode
+from models.nns import highway_network, multi_conv1d, dropout, viterbi_decode
 from models.rnns import BiRNN, StackBiRNN, DenseConnectBiRNN
 
 
@@ -104,7 +104,7 @@ class SeqLabelModel(BaseModel):
                 output = rnns(self.word_embeddings, self.seq_lengths)
                 output = dropout(output, keep_prob=self.keep_prob, is_train=self.is_train)
 
-        self.logits = dense(output, self.cfg.tag_vocab_size, use_bias=True, scope='project')
+        self.logits = tf.layers.dense(output, self.cfg.tag_vocab_size, use_bias=True, name='project')
 
     def _build_loss_op(self):
         if self.cfg.use_crf:
