@@ -59,6 +59,8 @@ class SeqLabelModel(BaseModel):
         return feed_dict, sequence_lengths
 
     def _build_embeddings_op(self):
+        tf.summary.scalar('dropout_keep_probability', self.keep_prob)
+        tf.summary.scalar("learning_rate", self.lr)
         with tf.variable_scope('words'):
             if self.cfg.use_pretrained:
                 _word_embeddings = tf.Variable(self.cfg.glove_embeddings, name='_word_embeddings', dtype=tf.float32,
@@ -86,6 +88,7 @@ class SeqLabelModel(BaseModel):
                                                        is_train=self.is_train, keep_prob=self.keep_prob)
         else:  # directly dropout before model_op
             self.word_embeddings = dropout(word_embeddings, keep_prob=self.keep_prob, is_train=self.is_train)
+        print("embeddings shape: {}".format(self.word_embeddings.get_shape().as_list()))
 
     def _build_model_op(self):
         with tf.variable_scope('bidirectional_rnn'):
@@ -103,8 +106,12 @@ class SeqLabelModel(BaseModel):
                 rnns = BiRNN(self.cfg.num_units, scope='single_mode')
                 output = rnns(self.word_embeddings, self.seq_lengths)
                 output = dropout(output, keep_prob=self.keep_prob, is_train=self.is_train)
+            print("rnn output shape: {}".format(output.get_shape().as_list()))
 
-        self.logits = tf.layers.dense(output, self.cfg.tag_vocab_size, use_bias=True, name='project')
+        with tf.variable_scope("project"):
+            self.logits = tf.layers.dense(output, self.cfg.tag_vocab_size, use_bias=True)
+            print("logits shape: {}".format(self.logits.get_shape().as_list()))
+            self.variable_summaries(self.logits)
 
     def _build_loss_op(self):
         if self.cfg.use_crf:
@@ -115,6 +122,7 @@ class SeqLabelModel(BaseModel):
             mask = tf.sequence_mask(self.seq_lengths)
             losses = tf.boolean_mask(losses, mask)
             self.loss = tf.reduce_mean(losses)
+        tf.summary.scalar("loss", self.loss)
 
     def _build_pred_op(self):
         if not self.cfg.use_crf:
@@ -125,13 +133,18 @@ class SeqLabelModel(BaseModel):
         best_score = 0  # store the current best f1 score on dev_set, updated if new best one is derived
         no_imprv_epoch_count = 0  # count the continuous no improvement epochs
         init_lr = self.cfg.lr  # initial learning rate
+        num_batches = (len(train_set) + self.cfg.batch_size - 1) // self.cfg.batch_size
+        self.add_summary()
         for epoch in range(1, self.cfg.epochs + 1):  # run each epoch
             self.logger.info('Epoch %2d/%2d:' % (epoch, self.cfg.epochs))
-            prog = Progbar(target=(len(train_set) + self.cfg.batch_size - 1) // self.cfg.batch_size)  # nbatches
+            prog = Progbar(target=num_batches)  # nbatches
             for i, (words, labels) in enumerate(batch_iter(train_set, self.cfg.batch_size)):
                 feed_dict, _ = self._get_feed_dict(words, True, labels, self.cfg.lr, self.cfg.keep_prob)
-                _, train_loss = self.sess.run([self.train_op, self.loss], feed_dict=feed_dict)
+                _, train_loss, summary = self.sess.run([self.train_op, self.loss, self.merged], feed_dict=feed_dict)
                 prog.update(i + 1, [("train loss", train_loss)])
+                # add summary
+                if i % 10 == 0:
+                    self.file_writer.add_summary(summary, (epoch - 1) * num_batches + i)
             self.evaluate(dev_set)  # evaluate dev_set
             metrics = self.evaluate(test_set, eval_dev=False)  # evaluate test_set
             cur_score = metrics['f1']
@@ -153,6 +166,7 @@ class SeqLabelModel(BaseModel):
                     self.save_session(epoch)  # save the last one
                     break
         self.logger.info('Training process done...')
+        self.file_writer.close()
 
     def predict(self, words):
         feed_dict, sequence_lengths = self._get_feed_dict(words, False, keep_prob=1.0)

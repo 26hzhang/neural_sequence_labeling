@@ -35,6 +35,21 @@ class BaseModel(object):
     def close_session(self):
         self.sess.close()
 
+    @staticmethod
+    def variable_summaries(variable):
+        with tf.name_scope('summaries'):
+            mean = tf.reduce_mean(variable)
+            tf.summary.scalar("mean", mean)  # add mean value
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(variable - mean)))
+            tf.summary.scalar("stddev", stddev)  # add standard deviation value
+            tf.summary.scalar("max", tf.reduce_max(variable))  # add maximal value
+            tf.summary.scalar("min", tf.reduce_min(variable))  # add minimal value
+            tf.summary.histogram("histogram", variable)  # add histogram
+
+    def add_summary(self):
+        self.merged = tf.summary.merge_all()
+        self.file_writer = tf.summary.FileWriter(self.cfg.summary_dir, self.sess.graph)
+
     def _build_train_op(self, lr_method, lr, loss, grad_clip):
         with tf.variable_scope('train_step'):
             if lr_method == 'adagrad':

@@ -7,6 +7,7 @@ class Config(object):
     def __init__(self):
         if not os.path.exists(self.ckpt_path):
             os.makedirs(self.ckpt_path)
+            os.makedirs(self.summary_dir)
         self.logger = get_logger(self.log_file)
         self.word_vocab = load_vocab(self.word_vocab_filename)
         self.char_vocab = load_vocab(self.char_vocab_filename)
@@ -29,7 +30,8 @@ class Config(object):
     char_vocab_filename = __head_dir + 'chars.txt'
     tag_filename = __head_dir + '{}_tags.txt'.format(train_task)
 
-    """checkpoint and log files"""
+    """checkpoint, summary and log files"""
+    summary_dir = "ckpt/{}/summary/".format(train_task)
     ckpt_path = 'ckpt/{}/'.format(train_task)  # path to save trained model
     log_file = ckpt_path + 'log_{}.txt'.format(train_task)  # log file
     model_name = 'seq_labeling_{}'.format(train_task)
