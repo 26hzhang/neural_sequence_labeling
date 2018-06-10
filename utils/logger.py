@@ -55,12 +55,19 @@ class Progbar(object):
         if values is None:
             values = []
         for k, v in values:
-            if k not in self.sum_values:
-                self.sum_values[k] = [v * (current - self.seen_so_far), current - self.seen_so_far]
-                self.unique_values.append(k)
+            if type(v) == int:  # for global steps
+                if k not in self.sum_values:
+                    self.unique_values.append(k)
+                    self.sum_values[k] = v
+                else:
+                    self.sum_values[k] = v
             else:
-                self.sum_values[k][0] += v * (current - self.seen_so_far)
-                self.sum_values[k][1] += (current - self.seen_so_far)
+                if k not in self.sum_values:
+                    self.sum_values[k] = [v * (current - self.seen_so_far), current - self.seen_so_far]
+                    self.unique_values.append(k)
+                else:
+                    self.sum_values[k][0] += v * (current - self.seen_so_far)
+                    self.sum_values[k][1] += (current - self.seen_so_far)
         for k, v in exact:
             if k not in self.sum_values:
                 self.unique_values.append(k)
