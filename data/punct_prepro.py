@@ -15,7 +15,7 @@ PUNCTUATION_MAPPING = {"!EXCLAMATIONMARK": ".PERIOD", ":COLON": ",COMMA", ";SEMI
 
 EOS_TOKENS = {".PERIOD", "?QUESTIONMARK", "!EXCLAMATIONMARK"}
 # punctuations that are not included in vocabulary nor mapping, must be added to CRAP_TOKENS
-CRAP_TOKENS = {"<assets>", "<assets.>"}
+CRAP_TOKENS = {"<doc>", "<doc.>"}
 
 
 def is_number(word):
