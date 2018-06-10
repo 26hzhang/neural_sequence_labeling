@@ -88,7 +88,7 @@ $ O O  O COMMA  O  O    COMMA     O O                O        PERIOD
 ```
 To deal with this task, I build an attention-based model, which follows the structure `Words Embeddings + Chars Embeddings (RNNs/CNNs) + Densely Connected Bi-LSTM + Attention Mechanism + CRF`. All the configurations are put in the [punct_attentive_cfg.py](/configs/punct_attentive_cfg.py) and the model is built in the [punct_attentive_model.py](/models/punct_attentive_model.py).
 
-To train the model, directly run `python3 train_punct_attentive_model.py`, and below gives an example of attentive model and achieves `F1 Score = 69.5`, which is slightly higher than the SOTA results.
+To train the model, directly run `python3 train_punct_attentive_model.py`, and below gives an example of attentive model and achieves `F1 Score = 68.9`, which is slightly higher than the SOTA results.
 ```bash
 Build models...
 word embedding shape: [None, None, 300]
