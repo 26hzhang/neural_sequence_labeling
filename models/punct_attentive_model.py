@@ -65,7 +65,7 @@ class SequenceLabelModel(BaseModel):
                     char_bi_rnn = BiRNN(self.cfg["char_num_units"], cell_type=self.cfg["cell_type"], scope="c_bi_rnn")
                     char_represent = char_bi_rnn(char_emb, self.char_seq_len, use_last_state=True)
                 else:
-                    char_represent = multi_conv1d(char_emb, self.filter_sizes, self.channel_sizes,
+                    char_represent = multi_conv1d(char_emb, self.cfg["filter_sizes"], self.cfg["channel_sizes"],
                                                   drop_rate=self.drop_rate,
                                                   is_train=self.is_train)
                 print("chars representation shape: {}".format(char_represent.get_shape().as_list()))

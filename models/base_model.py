@@ -39,9 +39,6 @@ class BaseModel:
         self.rev_word_dict = dict([(idx, word) for word, idx in self.word_dict.items()])
         self.rev_char_dict = dict([(idx, char) for char, idx in self.char_dict.items()])
         self.rev_tag_dict = dict([(idx, tag) for tag, idx in self.tag_dict.items()])
-        # char CNN params
-        self.filter_sizes = [self.cfg["filter_size"]] * self.cfg["num_filters"]
-        self.channel_sizes = [self.cfg["channel_size"]] * self.cfg["num_filters"]
 
     def initialize_session(self):
         sess_config = tf.ConfigProto()

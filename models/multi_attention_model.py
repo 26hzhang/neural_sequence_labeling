@@ -1,5 +1,6 @@
+import random
 import tensorflow as tf
-from utils import Progbar
+from utils import Progbar, batchnize_dataset
 from models import BaseModel, add_timing_signal, multi_conv1d, layer_normalize, multi_head_attention
 from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell, DropoutWrapper, ResidualWrapper
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn
@@ -64,7 +65,7 @@ class SequenceLabelModel(BaseModel):
                                         shape=[self.char_vocab_size - 1, self.cfg["char_emb_dim"]])
                 self.char_embeddings = tf.concat([c_pad_emb, c_emb], axis=0)
                 char_emb = tf.nn.embedding_lookup(self.char_embeddings, self.chars, name="char_emb")
-                char_represent = multi_conv1d(char_emb, self.filter_sizes, self.channel_sizes,
+                char_represent = multi_conv1d(char_emb, self.cfg["filter_sizes"], self.cfg["channel_sizes"],
                                               drop_rate=self.emb_drop_rate, is_train=self.is_train)
                 if self.cfg["add_positional_emb"]:
                     char_represent = add_timing_signal(char_represent)
@@ -108,7 +109,10 @@ class SequenceLabelModel(BaseModel):
             self.logits = tf.layers.dense(attn_outs, units=self.tag_vocab_size, use_bias=True)
             print("logits shape: {}".format(self.logits.get_shape().as_list()))
 
-    def train_epoch(self, train_set, valid_data, epoch):
+    def train_epoch(self, train_set, valid_data, epoch, shuffle=True):
+        if shuffle:
+            random.shuffle(train_set)
+        train_set = batchnize_dataset(train_set, self.cfg.batch_size)
         num_batches = len(train_set)
         prog = Progbar(target=num_batches)
         for i, batch_data in enumerate(train_set):

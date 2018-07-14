@@ -230,25 +230,19 @@ class AttentionCell(RNNCell):  # time_major based
 
 def add_timing_signal(x, min_timescale=1.0, max_timescale=1.0e4):
     """Adds a bunch of sinusoids of different frequencies to a Tensor.
-
     Each channel of the input Tensor is incremented by a sinusoid of a different frequency and phase.
-
     This allows attention to learn to use absolute and relative positions. Timing signals should be added to some
     precursors of both the query and the memory inputs to attention.
-
     The use of relative position is possible because sin(x+y) and cos(x+y) can be expressed in terms of y,
     sin(x) and cos(x).
-
     In particular, we use a geometric sequence of timescales starting with min_timescale and ending with max_timescale.
     The number of different timescales is equal to channels / 2. For each timescale, we generate the two sinusoidal
     signals sin(timestep/timescale) and cos(timestep/timescale).  All of these sinusoids are concatenated in the
     channels dimension.
-
     Args:
         x: a Tensor with shape [batch, length, channels]
         min_timescale: a float
         max_timescale: a float
-
     Returns:
         a Tensor the same shape as x.
     """
@@ -271,26 +265,6 @@ def add_timing_signal(x, min_timescale=1.0, max_timescale=1.0e4):
 
 
 def label_smoothing(inputs, epsilon=0.1):
-    """Apply label smoothing: Rethinking the Inception Architecture for Computer Vision https://arxiv.org/abs/1512.00567
-    @:param inputs: A 3d tensor with shape of [N, T, V], where V is the number of vocabulary.
-    @:param epsilon: Smoothing rate.
-    For example,
-    ```
-    import tensorflow as tf
-    inputs = tf.convert_to_tensor([[[0, 0, 1], [0, 1, 0], [1, 0, 0]],
-                                   [[1, 0, 0], [1, 0, 0], [0, 1, 0]]], tf.float32)
-    outputs = label_smoothing(inputs)
-    with tf.Session() as sess:
-        print(sess.run([outputs]))
-    >>
-    [array([[[ 0.03333334,  0.03333334,  0.93333334],
-        [ 0.03333334,  0.93333334,  0.03333334],
-        [ 0.93333334,  0.03333334,  0.03333334]],
-        [[ 0.93333334,  0.03333334,  0.03333334],
-        [ 0.93333334,  0.03333334,  0.03333334],
-        [ 0.03333334,  0.93333334,  0.03333334]]], dtype=float32)]
-    ```
-    """
     dim = inputs.get_shape().as_list()[-1]  # number of channels
     return ((1 - epsilon) * inputs) + (epsilon / dim)
 

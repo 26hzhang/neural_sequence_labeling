@@ -16,7 +16,7 @@ NNP VBZ     JJ     NN   TO VB      JJ      NN   .
 ```
 This task is a typical sequence labeling, and current SOTA POS tagging methods are well solved this problem, those methods work rapidly and reliably, with per-token accuracies of slightly over **97%** ([ref.](https://nlp.stanford.edu/pubs/CICLing2011-manning-tagging.pdf)). So, for the model of this task, I just follow the structure of ***NER Task***, to build a POS tagger, which is able to achieve good performance.
 
-Similarly, all the configurations are put in the [conll_pos_blstm_cnn_crf.py](/configs/conll_pos_blstm_cnn_crf_cfg.py) and the model is built in the [blstm_cnn_crf_model.py](/models/blstm_cnn_crf_model.py). Simply run `python3 train_conll_pos_blstm_cnn_crf.py` to start a training process.
+Similarly, all the configurations are put in the [train_conll_pos_blstm_cnn_crf.py](train_conll_pos_blstm_cnn_crf.py) and the model is built in the [blstm_cnn_crf_model.py](/models/blstm_cnn_crf_model.py). Simply run `python3 train_conll_pos_blstm_cnn_crf.py` to start a training process.
 
 ### Chunking Task
 Experiment on `CoNLL 2003 Chunk dataset`, (**21** target annotations), example:
@@ -24,7 +24,7 @@ Experiment on `CoNLL 2003 Chunk dataset`, (**21** target annotations), example:
 EU   rejects German call to   boycott British lamb . 
 B-NP B-VP    B-NP   I-NP B-VP I-VP    B-NP    I-NP O 
 ```
-This task is also similar to the NER task below, so the model for Chunking task also follows the structure of **NER**. ALL the configurations are put in the [conll_chunk_blstm_cnn_crf_cfg.py](/configs/conll_chunk_blstm_cnn_crf_cfg.py) and the model is built in the [blstm_cnn_crf_model.py](/models/blstm_cnn_crf_model.py).
+This task is also similar to the NER task below, so the model for Chunking task also follows the structure of **NER**. ALL the configurations are put in the [train_conll_chunk_blstm_cnn_crf.py](train_conll_chunk_blstm_cnn_crf.py) and the model is built in the [blstm_cnn_crf_model.py](/models/blstm_cnn_crf_model.py).
 
 To achieve the SOTA results, the parameters are need to be carefully tuned.
 
@@ -34,7 +34,7 @@ Experiment on `CoNLL 2003 NER dataset`, standard `BIO2` annotation format (**9**
 Stanford University located at California .
 B-ORG    I-ORG      O       O  B-LOC      O
 ```
-To tackle this task, I build the model follows the structure of `Words Embeddings + Chars Embeddings (RNNs/CNNs) + RNNs + CRF` (basement), and several variant modules as well as attention mechanism are available. All the configurations are put in the [conll_ner_blstm_cnn_crf.py](/configs/conll_ner_blstm_cnn_crf_cfg.py) and the model is built in the [blstm_cnn_crf_model.py](/models/blstm_cnn_crf_model.py).
+To tackle this task, I build the model follows the structure of `Words Embeddings + Chars Embeddings (RNNs/CNNs) + RNNs + CRF` (basement), and several variant modules as well as attention mechanism are available. All the configurations are put in the [train_conll_ner_blstm_cnn_crf.py](train_conll_ner_blstm_cnn_crf.py) and the model is built in the [blstm_cnn_crf_model.py](/models/blstm_cnn_crf_model.py).
 
 The SOTA performance (F1 score, [ref](https://www.quora.com/What-is-the-current-state-of-the-art-in-Named-Entity-Recognition-NER)) is `F1 Score = 91.21` achieved by [End-to-end Sequence Labeling via Bi-directional LSTM-CNNs-CRF](https://arxiv.org/pdf/1603.01354.pdf), so the basement model also follow the similar structure as this paper, but the parameters setting is different.
 
@@ -67,7 +67,7 @@ Some SOTA NER F1 score on test data set from CoNLL-2003:
 
 > Some reported F1 scores are higher than 91.21 are not shown here, since the author of `End-to-end Sequence Labeling via Bi-directional LSTM-CNNs-CRF` mentioned that they are not comparable to the work since they use larger data set for training.
 
-The variant modules include Stack Bidirectional RNN (multi-layers), Multi-RNN Cells (multi-layers), Lurong/Bahdanau Attention Mechanism, Self-attention Mechanism, Residual Connection, Layer Normalization and so on. However, these modifications did not improve (sometime even worse than basement model) the performance significantly (`F1 score improves >= 1.5`). It's easy to apply those variants and train by modifying the config settings in [conll_ner_blstm_cnn_crf.py](/configs/conll_ner_blstm_cnn_crf_cfg.py).
+The variant modules include Stack Bidirectional RNN (multi-layers), Multi-RNN Cells (multi-layers), Lurong/Bahdanau Attention Mechanism, Self-attention Mechanism, Residual Connection, Layer Normalization and so on. However, these modifications did not improve (sometime even worse than basement model) the performance significantly (`F1 score improves >= 1.5`). It's easy to apply those variants and train by modifying the config settings in [train_conll_ner_blstm_cnn_crf.py](train_conll_ner_blstm_cnn_crf.py).
 
 ### Spoken Language Understanding Task
 Experiment on `MEDIA dataset` (French language), standard `BIO2` annotation format (**138** target annotations), example:
@@ -76,7 +76,9 @@ réserver        dans l'       un       de              ces             hôtels
 B-command-tache O    B-nombre I-nombre B-lienRef-coRef I-lienRef-coRef B-objetBD
 ```
 
-**TODO**
+> Current highest F1 score is 86.4, which is slightly lower than the SOTA F1 result, which is 86.95.
+
+Details of configurations and model are placed in [train_media_multi_attention.py](train_media_multi_attention.py) and [multi_attention_model.py](/models/multi_attention_model.py) separately.
 
 ### Punctuation Restoration/Sentence Boundary Detection Task
 Experiment on `Transcripts of TED Talks (IWSLT) dataset`, example:
@@ -86,7 +88,7 @@ $ processed annotation format:
 $ i 'm a savant or more precisely a high-functioning autistic savant
 $ O O  O COMMA  O  O    COMMA     O O                O        PERIOD
 ```
-To deal with this task, I build an attention-based model, which follows the structure `Words Embeddings + Chars Embeddings (RNNs/CNNs) + Densely Connected Bi-LSTM + Attention Mechanism + CRF`. All the configurations are put in the [punct_attentive_cfg.py](/configs/punct_attentive_cfg.py) and the model is built in the [punct_attentive_model.py](/models/punct_attentive_model.py).
+To deal with this task, I build an attention-based model, which follows the structure `Words Embeddings + Chars Embeddings (RNNs/CNNs) + Densely Connected Bi-LSTM + Attention Mechanism + CRF`. All the configurations are put in the [train_punct_attentive_model.py](train_punct_attentive_model.py) and the model is built in the [punct_attentive_model.py](/models/punct_attentive_model.py).
 
 To train the model, directly run `python3 train_punct_attentive_model.py`, and below gives an example of attentive model and achieves `F1 Score = 68.9`, which is slightly higher than the SOTA results.
 ```bash
@@ -125,13 +127,13 @@ SER: 64.4%
 Some SOTA scores on English reference transcripts (`ref`) and ASR output testset (`asr`) from IWSLT:  
 ![ref-asr](/assets/ref-asr.png)
 
-> The overall F1 score of the attentive model on `ref` dataset is `67.6~69.5`, while on `asr` dataset is `60.2~61.5`. It makes me puzzle is that why the model achieves higher score on `ref` dataset but lower score in `asr` dataset.
+> The overall F1 score of the attentive model on `ref` dataset is `67.6~69.5`, while on `asr` dataset is `60.2~61.5`.
 
 ## Resources
 ### Datasets
 - [CoNLL 2003 POS, Chunking and NER datasets](https://github.com/synalp/NER/tree/master/corpus/CoNLL-2003).
-- MEDIA dataset (confidential), please email the author of [Is it time to switch to Word Embedding and Recurrent Neural Networks for Spoken Language Understanding?](https://hal.inria.fr/hal-01196915/document) for the dataset.
-- Transcripts of TED Talks (IWSLT) dataset (confidential) for Punctuation Restoration or Sentence Boundary Detection, please email the author of [Bidirectional Recurrent Neural Network with Attention Mechanism for Punctuation Restoration](https://www.researchgate.net/publication/307889284_Bidirectional_Recurrent_Neural_Network_with_Attention_Mechanism_for_Punctuation_Restoration) for the dataset. But I provided the converted dataset built from the raw dataset, which can be used to train a model directly.
+- MEDIA dataset, details in [Is it time to switch to Word Embedding and Recurrent Neural Networks for Spoken Language Understanding?](https://hal.inria.fr/hal-01196915/document).
+- Transcripts of TED Talks (IWSLT) dataset for Punctuation Restoration or Sentence Boundary Detection, details in [Bidirectional Recurrent Neural Network with Attention Mechanism for Punctuation Restoration](https://www.researchgate.net/publication/307889284_Bidirectional_Recurrent_Neural_Network_with_Attention_Mechanism_for_Punctuation_Restoration). I also provided the converted dataset built from the raw dataset, which can be used to train a model directly.
 
 ### Embeddings and Evaluation Script
 - [GloVe Embeddings (6B, 42B, 840B)](https://nlp.stanford.edu/projects/glove/)
@@ -151,6 +153,6 @@ Some SOTA scores on English reference transcripts (`ref`) and ASR output testset
 
 ### Others
 - [Difference between MultiRNNCell and stack_bidirectional_dynamic_rnn in Tensorflow](https://stackoverflow.com/questions/49242266/difference-between-multirnncell-and-stack-bidirectional-dynamic-rnn-in-tensorflo)
-- [使用深度学习进行中文自然语言处理之序列标注](https://www.jianshu.com/p/7e233ef57cb6)
+- [Chinese Sequence Labeling using Deep Learning Method](https://www.jianshu.com/p/7e233ef57cb6)
 - [Building a large annotated corpus of English: the Penn Treebank](https://catalog.ldc.upenn.edu/docs/LDC95T7/cl93.html)
 - [PennTree Bank POS tags](https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html)

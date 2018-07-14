@@ -64,8 +64,8 @@ class SequenceLabelModel(BaseModel):
                 self.char_embeddings = tf.get_variable(name="c_emb", dtype=tf.float32, trainable=True,
                                                        shape=[self.char_vocab_size, self.cfg["char_emb_dim"]])
                 char_emb = tf.nn.embedding_lookup(self.char_embeddings, self.chars, name="chars_emb")
-                char_represent = multi_conv1d(char_emb, self.filter_sizes, self.channel_sizes, drop_rate=self.drop_rate,
-                                              is_train=self.is_train)
+                char_represent = multi_conv1d(char_emb, self.cfg["filter_sizes"], self.cfg["channel_sizes"],
+                                              drop_rate=self.drop_rate, is_train=self.is_train)
                 print("chars representation shape: {}".format(char_represent.get_shape().as_list()))
                 word_emb = tf.concat([word_emb, char_represent], axis=-1)
             if self.cfg["use_highway"]:
