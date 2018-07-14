@@ -109,6 +109,4 @@ ckpt/
 .DS_Store
 *.DS_Store
 data/dataset/
-data/raw/media/
-data/raw/LREC/
 
