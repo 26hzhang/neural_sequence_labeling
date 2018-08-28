@@ -149,8 +149,8 @@ class SequenceLabelModel(BaseModel):
             self.logger.info("Epoch {}/{}:".format(epoch, self.cfg["epochs"]))
             self.train_epoch(train_set, valid_data, epoch)
             # self.evaluate(valid_text)
-            ref_f1 = self.evaluate(test_texts[0])["F1"] * 100.0  # use ref to compute best F1
-            asr_f1 = self.evaluate(test_texts[1])["F1"] * 100.0
+            ref_f1 = self.evaluate_punct(test_texts[0])["F1"] * 100.0  # use ref to compute best F1
+            asr_f1 = self.evaluate_punct(test_texts[1])["F1"] * 100.0
             if ref_f1 >= best_f1:
                 best_f1 = ref_f1
                 no_imprv_epoch = 0
@@ -166,7 +166,7 @@ class SequenceLabelModel(BaseModel):
         self.train_writer.close()
         self.test_writer.close()
 
-    def evaluate(self, file):
+    def evaluate_punct(self, file):
         save_path = os.path.join(self.cfg["checkpoint_path"], "result.txt")
         with codecs.open(file, mode="r", encoding="utf-8") as f:
             text = f.read().split()

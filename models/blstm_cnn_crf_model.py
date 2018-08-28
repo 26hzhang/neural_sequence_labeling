@@ -142,21 +142,13 @@ class SequenceLabelModel(BaseModel):
             if self.cfg["use_lr_decay"]:  # learning rate decay
                 self.cfg["lr"] = max(init_lr / (1.0 + self.cfg["lr_decay"] * epoch), self.cfg["minimal_lr"])
             if self.cfg["task_name"] == "pos":
-                v_accuracy = self.eval_accuracy(valid_set)
-                self.logger.info("Valid dataset -- accuracy: {:04.2f}".format(v_accuracy * 100.0))
-                t_accuracy = self.eval_accuracy(test_set)
-                self.logger.info("Test dataset -- accuracy: {:04.2f}".format(t_accuracy * 100.0))
-                cur_test_score = t_accuracy * 100.0
+                self.eval_accuracy(valid_set, "dev")
+                acc = self.eval_accuracy(test_set, "test")
+                cur_test_score = acc
             else:
-                v_score = self.evaluate(valid_set)
-                self.logger.info("Valid dataset -- accuracy: {:04.2f}, precision: {:04.2f}, recall: {:04.2f}, "
-                                 "FB1: {:04.2f}".format(v_score["accuracy"], v_score["precision"], v_score["recall"],
-                                                        v_score["FB1"]))
-                t_score = self.evaluate(test_set)
-                self.logger.info("Test dataset -- accuracy: {:04.2f}, precision: {:04.2f}, recall: {:04.2f}, "
-                                 "FB1: {:04.2f}".format(t_score["accuracy"], t_score["precision"], t_score["recall"],
-                                                        t_score["FB1"]))
-                cur_test_score = t_score["FB1"]
+                self.evaluate(valid_set, "dev")
+                score = self.evaluate(test_set, "test")
+                cur_test_score = score["FB1"]
             if cur_test_score > best_f1:
                 best_f1 = cur_test_score
                 no_imprv_epoch = 0
@@ -171,7 +163,7 @@ class SequenceLabelModel(BaseModel):
         self.train_writer.close()
         self.test_writer.close()
 
-    def eval_accuracy(self, dataset):  # Used for POS task
+    def eval_accuracy(self, dataset, name):  # Used for POS task
         accuracy = []
         for data in dataset:
             predicts = self._predict_op(data)
@@ -179,4 +171,6 @@ class SequenceLabelModel(BaseModel):
                 preds = preds[:seq_len]
                 tags = tags[:seq_len]
                 accuracy += [p == t for p, t in zip(preds, tags)]
-        return np.mean(accuracy)
+        acc = np.mean(accuracy) * 100.0
+        self.logger.info("{} dataset -- accuracy: {:04.2f}".format(name, acc))
+        return acc

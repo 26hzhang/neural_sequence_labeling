@@ -11,7 +11,6 @@ class BaseModel:
     def __init__(self, config):
         self.cfg = config
         self._initialize_config()
-        self.ce = CoNLLeval()
         self.sess, self.saver = None, None
         self._add_placeholders()
         self._build_embedding_op()
@@ -169,16 +168,12 @@ class BaseModel:
         for epoch in range(1, self.cfg["epochs"] + 1):
             self.logger.info('Epoch {}/{}:'.format(epoch, self.cfg["epochs"]))
             self.train_epoch(train_set, valid_data, epoch)  # train epochs
-            v_score = self.evaluate(valid_set)
-            self.logger.info("Valid dataset -- accuracy: {:04.2f}, precision: {:04.2f}, recall: {:04.2f}, FB1: {:04.2f}"
-                             .format(v_score["accuracy"], v_score["precision"], v_score["recall"], v_score["FB1"]))
-            t_score = self.evaluate(test_set)
-            self.logger.info("Test dataset -- accuracy: {:04.2f}, precision: {:04.2f}, recall: {:04.2f}, FB1: {:04.2f}"
-                             .format(t_score["accuracy"], t_score["precision"], t_score["recall"], t_score["FB1"]))
+            self.evaluate(valid_set, "dev")
+            score = self.evaluate(test_set, "test")
             if self.cfg["use_lr_decay"]:  # learning rate decay
                 self.cfg["lr"] = max(init_lr / (1.0 + self.cfg["lr_decay"] * epoch), self.cfg["minimal_lr"])
-            if t_score["FB1"] > best_f1:
-                best_f1 = t_score["FB1"]
+            if score["FB1"] > best_f1:
+                best_f1 = score["FB1"]
                 no_imprv_epoch = 0
                 self.save_session(epoch)
                 self.logger.info(' -- new BEST score on test dataset: {:04.2f}'.format(best_f1))
@@ -191,7 +186,7 @@ class BaseModel:
         self.train_writer.close()
         self.test_writer.close()
 
-    def evaluate(self, dataset):
+    def evaluate(self, dataset, name):
         save_path = os.path.join(self.cfg["checkpoint_path"], "result.txt")
         predictions, groundtruth, words_list = list(), list(), list()
         for data in dataset:
@@ -203,11 +198,10 @@ class BaseModel:
                 predictions.append(preds)
                 groundtruth.append(tags)
                 words_list.append(words)
-        score = self.ce.conlleval(predictions, groundtruth, words_list, save_path)
-        try:  # delete saved file after compute scores
-            os.remove(save_path)
-        except OSError:
-            pass
+        ce = CoNLLeval()
+        score = ce.conlleval(predictions, groundtruth, words_list, save_path)
+        self.logger.info("{} dataset -- acc: {:04.2f}, pre: {:04.2f}, rec: {:04.2f}, FB1: {:04.2f}"
+                         .format(name, score["accuracy"], score["precision"], score["recall"], score["FB1"]))
         return score
 
     def words_to_indices(self, words):
