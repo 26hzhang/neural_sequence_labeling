@@ -7,7 +7,7 @@ from models import BaseModel, AttentionCell, highway_network, BiRNN, DenselyConn
 from tensorflow.python.ops.rnn import dynamic_rnn
 from tensorflow.contrib.crf import crf_log_likelihood
 from utils import Progbar, pad_char_sequences
-from data.punct_prepro import PUNCTUATION_VOCABULARY, PUNCTUATION_MAPPING, END, UNK, EOS_TOKENS, SPACE
+from utils.punct_prepro import PUNCTUATION_VOCABULARY, PUNCTUATION_MAPPING, END, UNK, EOS_TOKENS, SPACE
 
 
 class SequenceLabelModel(BaseModel):

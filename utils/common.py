@@ -2,7 +2,6 @@ import codecs
 import ujson
 import re
 import unicodedata
-from unicodedata import normalize
 
 PAD = "<PAD>"
 UNK = "<UNK>"
@@ -16,10 +15,7 @@ def write_json(filename, dataset):
         ujson.dump(dataset, f)
 
 
-def word_convert(word, language="english", keep_number=True, lowercase=True):
-    # convert french characters to latin equivalents
-    if language.lower() == "french":
-        word = normalize("NFD", word).encode("ascii", "ignore").decode("utf-8")
+def word_convert(word, keep_number=True, lowercase=True):
     if not keep_number:
         if is_digit(word):
             word = NUM

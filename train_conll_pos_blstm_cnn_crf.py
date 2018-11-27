@@ -1,6 +1,6 @@
 import tensorflow as tf
 import os
-from data.conll2003_prepro import process_data
+from utils.conll2003_prepro import process_data
 from models.blstm_cnn_crf_model import SequenceLabelModel
 from utils import batchnize_dataset
 

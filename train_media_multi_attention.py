@@ -1,6 +1,6 @@
 import tensorflow as tf
 import os
-from data.media_prepro import process_data
+from utils.media_prepro import process_data
 from models.multi_attention_model import SequenceLabelModel
 from utils import batchnize_dataset, load_dataset
 

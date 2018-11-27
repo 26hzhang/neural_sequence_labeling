@@ -1,7 +1,7 @@
 import os
 import codecs
 from collections import Counter
-from data.common import write_json, PAD, UNK, word_convert
+from utils.common import write_json, PAD, UNK, word_convert
 
 
 def raw_dataset_iter(filename, encoding="utf-8"):
@@ -15,7 +15,7 @@ def raw_dataset_iter(filename, encoding="utf-8"):
                     words, tags = [], []
             else:
                 _, word, tag = line.split("\t")
-                word = word_convert(word, language="french")
+                word = word_convert(word)
                 words.append(word)
                 tags.append(tag)
 
@@ -65,9 +65,9 @@ def build_dataset(data, word_dict, char_dict, tag_dict):
 
 def process_data(config):
     # load raw data
-    train_data = load_dataset(os.path.join(config["raw_path"], "train.crf"), encoding="cp1252")
-    dev_data = load_dataset(os.path.join(config["raw_path"], "dev.crf"), encoding="cp1252")
-    test_data = load_dataset(os.path.join(config["raw_path"], "test.crf"), encoding="cp1252")
+    train_data = load_dataset(os.path.join(config["raw_path"], "train.txt"))
+    dev_data = load_dataset(os.path.join(config["raw_path"], "valid.txt"))
+    test_data = load_dataset(os.path.join(config["raw_path"], "test.txt"))
     # build vocabulary
     word_dict, char_dict, _ = build_vocab([train_data, dev_data])
     *_, tag_dict = build_vocab([train_data, dev_data, test_data])

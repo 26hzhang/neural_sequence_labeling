@@ -4,7 +4,7 @@ from collections import Counter
 import numpy as np
 import codecs
 import re
-from data.common import SPACE, UNK, PAD, NUM, END, write_json
+from utils.common import SPACE, UNK, PAD, NUM, END, write_json
 
 # pre-set number of records in different glove embeddings
 glove_sizes = {'6B': int(4e5), '42B': int(1.9e6), '840B': int(2.2e6), '2B': int(1.2e6)}

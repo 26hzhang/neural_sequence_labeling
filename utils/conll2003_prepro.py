@@ -3,7 +3,7 @@ import codecs
 import numpy as np
 from tqdm import tqdm
 from collections import Counter
-from data.common import write_json, PAD, UNK, NUM, word_convert
+from utils.common import write_json, PAD, UNK, NUM, word_convert
 
 glove_sizes = {'6B': int(4e5), '42B': int(1.9e6), '840B': int(2.2e6), '2B': int(1.2e6)}
 

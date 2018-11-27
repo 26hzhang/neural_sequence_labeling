@@ -1,6 +1,6 @@
 import tensorflow as tf
 import os
-from data.punct_prepro import process_data
+from utils.punct_prepro import process_data
 from utils import batchnize_dataset
 from models.punct_attentive_model import SequenceLabelModel
 

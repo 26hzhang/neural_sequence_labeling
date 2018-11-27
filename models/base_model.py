@@ -3,7 +3,7 @@ import numpy as np
 from tensorflow.contrib.crf import viterbi_decode, crf_log_likelihood
 from tensorflow.python.ops.rnn_cell import LSTMCell, GRUCell, MultiRNNCell
 from utils import CoNLLeval, load_dataset, get_logger, process_batch_data, align_data
-from data.common import word_convert, UNK
+from utils.common import word_convert, UNK
 import os
 
 
@@ -214,7 +214,7 @@ class BaseModel:
         for word in words:
             chars = [self.char_dict[char] if char in self.char_dict else self.char_dict[UNK] for char in word]
             chars_idx.append(chars)
-        words = [word_convert(word, language=self.cfg["language"]) for word in words]
+        words = [word_convert(word) for word in words]
         words_idx = [self.word_dict[word] if word in self.word_dict else self.word_dict[UNK] for word in words]
         return process_batch_data([words_idx], [chars_idx])
 
